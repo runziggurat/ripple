@@ -1,8 +1,6 @@
-use pea2pea::{protocols::Handshake, Pea2Pea};
-
 use crate::{
     setup::node::{Node, CONNECTION_TIMEOUT},
-    tools::synthetic_node::SyntheticNode,
+    tools::synth_node::SyntheticNode,
     wait_until,
 };
 
@@ -20,12 +18,11 @@ async fn handshake_when_node_receives_connection() {
     };
 
     let synth_node = SyntheticNode::new(node_config).await;
-    synth_node.enable_handshake().await;
-    synth_node.node().connect(node.addr()).await.unwrap();
+    synth_node.connect(node.addr()).await.unwrap();
 
     // This is only set post-handshake.
-    assert_eq!(synth_node.node().num_connected(), 1);
-    assert!(synth_node.node().is_connected(node.addr()));
+    assert_eq!(synth_node.num_connected(), 1);
+    assert!(synth_node.is_connected(node.addr()));
 
     // Gracefully shut down the Ripple node.
     node.stop().unwrap();
@@ -42,18 +39,17 @@ async fn handshake_when_node_initiates_connection() {
     };
 
     let synth_node = SyntheticNode::new(node_config).await;
-    synth_node.enable_handshake().await;
 
     // Start the Ripple node and set the synth node as an initial peer.
     let mut node = Node::new().unwrap();
     // TODO: consider implementing a hs! (HashSet::new) macro.
-    node.initial_peers(vec![synth_node.node().listening_addr().unwrap()])
+    node.initial_peers(vec![synth_node.listening_addr().unwrap()])
         .log_to_stdout(false)
         .start()
         .await
         .unwrap();
 
-    wait_until!(CONNECTION_TIMEOUT, synth_node.node().num_connected() == 1);
+    wait_until!(CONNECTION_TIMEOUT, synth_node.num_connected() == 1);
     assert!(synth_node.is_connected_ip(node.addr().ip()));
 
     // Gracefully shut down the Ripple node.

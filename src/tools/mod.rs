@@ -1,6 +1,7 @@
 //! Utilities for network testing.
 
-pub mod synthetic_node;
+pub mod inner_node;
+pub mod synth_node;
 pub mod tls_cert;
 
 /// Waits until an expression is true or times out.

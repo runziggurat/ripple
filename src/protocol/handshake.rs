@@ -12,7 +12,7 @@ use tracing::*;
 
 use crate::{
     protocol::codecs::http::{HttpCodec, HttpMsg},
-    tools::synthetic_node::{Crypto, SyntheticNode},
+    tools::inner_node::{Crypto, InnerNode},
 };
 
 #[repr(u8)]
@@ -73,7 +73,7 @@ fn get_shared_value<S>(tls_stream: &SslStream<S>) -> io::Result<Vec<u8>> {
 }
 
 #[async_trait::async_trait]
-impl Handshake for SyntheticNode {
+impl Handshake for InnerNode {
     async fn perform_handshake(&self, mut conn: Connection) -> io::Result<Connection> {
         let own_conn_side = !conn.side();
         let stream = self.take_stream(&mut conn);

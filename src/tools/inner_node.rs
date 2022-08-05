@@ -1,10 +1,18 @@
-use std::{net::IpAddr, sync::Arc};
+use std::{
+    io,
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+};
 
 use openssl::ssl::{SslAcceptor, SslConnector, SslMethod, SslVerifyMode};
-use pea2pea::{Node, Pea2Pea};
+use pea2pea::{
+    protocols::{Handshake, Reading, Writing},
+    Node, Pea2Pea,
+};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use tokio::sync::mpsc::Sender;
 
-use crate::tools::tls_cert;
+use crate::{protocol::codecs::binary::BinaryMessage, tools::tls_cert};
 
 /// Enables tracing for all [`SyntheticNode`] instances (usually scoped by test).
 pub fn enable_tracing() {
@@ -18,8 +26,9 @@ pub fn enable_tracing() {
 
 // A synthetic node adhering to Ripple's network protocol.
 #[derive(Clone)]
-pub struct SyntheticNode {
+pub struct InnerNode {
     node: Node,
+    pub(crate) sender: Sender<(SocketAddr, BinaryMessage)>,
     pub crypto: Arc<Crypto>,
     pub tls: Tls,
 }
@@ -38,14 +47,14 @@ pub struct Crypto {
     pub public_key: PublicKey,
 }
 
-impl Pea2Pea for SyntheticNode {
+impl Pea2Pea for InnerNode {
     fn node(&self) -> &Node {
         &self.node
     }
 }
 
-impl SyntheticNode {
-    pub async fn new(config: pea2pea::Config) -> Self {
+impl InnerNode {
+    pub async fn new(config: pea2pea::Config, sender: Sender<(SocketAddr, BinaryMessage)>) -> Self {
         // generate the keypair and prepare the crypto engine
 
         let engine = Secp256k1::new();
@@ -67,21 +76,24 @@ impl SyntheticNode {
         let acceptor = acceptor.build();
 
         // TLS connector
-
         let mut connector = SslConnector::builder(SslMethod::tls()).unwrap();
         connector.set_verify(SslVerifyMode::NONE); // we might remove it once the keypair is solid
         let connector = connector.build();
 
         // the node
-
-        Self {
+        let node = Self {
             node: Node::new(config).await.unwrap(),
+            sender,
             crypto,
             tls: Tls {
                 acceptor,
                 connector,
             },
-        }
+        };
+        node.enable_handshake().await;
+        node.enable_reading().await;
+        node.enable_writing().await;
+        node
     }
 
     pub fn is_connected_ip(&self, ip: IpAddr) -> bool {
@@ -89,5 +101,16 @@ impl SyntheticNode {
             .connected_addrs()
             .iter()
             .any(|addr| addr.ip() == ip)
+    }
+
+    /// Connects to the target address.
+    pub async fn connect(&self, target: SocketAddr) -> io::Result<()> {
+        self.node.connect(target).await?;
+        Ok(())
+    }
+
+    /// Gracefully shuts down the node.
+    pub async fn shut_down(&self) {
+        self.node.shut_down().await
     }
 }
