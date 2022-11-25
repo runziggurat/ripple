@@ -108,7 +108,6 @@ fn create_validator_blob_json(manifest: &Vec<u8>, pkstr: &str) -> String {
     // vvec.push(v);
     let vvec: Vec<Validator> = vec![v];
 
-
     // Set expiration to 1 year from now.
     // validator blob uses delta from Jan 1 2000,
     // and not 1970, per Unix epoch time
