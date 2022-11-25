@@ -98,14 +98,16 @@ fn _gen_keys() {
     println!("public key hex string {}", public_hex);
 }
 
-fn create_validator_blob_json(manifest: &Vec<u8>, pkstr: &String) -> String {
+fn create_validator_blob_json(manifest: &Vec<u8>, pkstr: &str) -> String {
     let mstr = base64::encode(manifest);
     let v = Validator {
-        validation_public_key: pkstr.clone(),
+        validation_public_key: pkstr.to_owned(),
         manifest: mstr,
     };
-    let mut vvec: Vec<Validator> = Vec::new();
-    vvec.push(v);
+    // let mut vvec: Vec<Validator> = Vec::new();
+    // vvec.push(v);
+    let vvec: Vec<Validator> = vec![v];
+
 
     // Set expiration to 1 year from now.
     // validator blob uses delta from Jan 1 2000,
@@ -121,11 +123,10 @@ fn create_validator_blob_json(manifest: &Vec<u8>, pkstr: &String) -> String {
 
     let vblob = ValidatorBlob {
         sequence: 2022100501,
-        expiration: expiration,
+        expiration,
         validators: vvec,
     };
-    let jstr = serde_json::to_string(&vblob).unwrap();
-    jstr
+    serde_json::to_string(&vblob).unwrap()
 }
 
 fn create_signable_manifest(
@@ -199,7 +200,7 @@ fn create_final_manifest(
     manifest[i] = 0x76; // field code 6 for "Signature"
     manifest[i + 1] = signature.len() as u8;
     i += 2;
-    manifest[i..i + signature.len()].clone_from_slice(&signature.as_slice());
+    manifest[i..i + signature.len()].clone_from_slice(signature.as_slice());
     i += signature.len();
 
     // serialize master signature
@@ -207,7 +208,7 @@ fn create_final_manifest(
     manifest[i + 1] = 0x12;
     manifest[i + 2] = master_signature.len() as u8;
     i += 3;
-    manifest[i..i + master_signature.len()].clone_from_slice(&master_signature.as_slice());
+    manifest[i..i + master_signature.len()].clone_from_slice(master_signature.as_slice());
     manifest
 }
 
@@ -218,8 +219,7 @@ fn sign_buffer(secret_key: &SecretKey, buffer: &Vec<u8>) -> Vec<u8> {
     let sig = engine.sign_ecdsa(&message, secret_key);
     let sigser = sig.serialize_der();
     let sigb64 = base64::encode(sigser);
-    let sigbytes = base64::decode(sigb64).expect("unable to decode a blob");
-    sigbytes
+    base64::decode(sigb64).expect("unable to decode a blob")
 }
 
 #[tokio::test]
