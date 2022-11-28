@@ -79,9 +79,7 @@ fn create_sha512_half_digest(buffer: &Vec<u8>) -> [u8; 32] {
 
     // we return 32 bytes of 64-byte result
     let mut signature = [0u8; 32];
-    for i in 0..32 {
-        signature[i] = result[i];
-    }
+    signature.copy_from_slice(&result[..32]);
     signature
 }
 
@@ -222,7 +220,8 @@ fn sign_buffer(secret_key: &SecretKey, buffer: &Vec<u8>) -> Vec<u8> {
 }
 
 #[tokio::test]
-async fn c026() {
+#[allow(non_snake_case)]
+async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     // Create stateful node.
     let target = TempDir::new().expect("unable to create TempDir");
     let mut node = Node::builder()
@@ -241,45 +240,42 @@ async fn c026() {
         .expect("unable to connect");
 
     // 1. Setup keys & prefix.  Both master and signing key pairs have been previously generated.
-    let master_secret_hex =
-        String::from("8484781AE8EEB87D8A5AA38483B5CBBCCE6AD66B4185BB193DDDFAD5C1F4FC06");
+    let master_secret_hex = "8484781AE8EEB87D8A5AA38483B5CBBCCE6AD66B4185BB193DDDFAD5C1F4FC06";
     // The master public key should be in the validators.txt file, in ~/.ziggurat/ripple/setup
-    let master_public_hex =
-        String::from("02ED521B8124454DD5B7769C813BD40E8D36E134DD51ACED873B49E165327F6DF2");
+    let master_public_hex = "02ED521B8124454DD5B7769C813BD40E8D36E134DD51ACED873B49E165327F6DF2";
     let master_secret_bytes = hex::decode(&master_secret_hex).expect("unable to decode hex");
     let master_public_bytes = hex::decode(&master_public_hex).expect("unable to decode hex");
     let master_secret_key =
         SecretKey::from_slice(master_secret_bytes.as_slice()).expect("unable to create secret key");
 
-    let signing_secret_hex =
-        String::from("00F963180681C0D1D51D1128096B8FF8668AFDC41CBDED511D12D390105EFDDC");
-    let signing_public_hex =
-        String::from("03859B76317C8AA64F2D253D3547831E413F2663AE2568F7A17E85B283CC8861E4");
+    let signing_secret_hex = "00F963180681C0D1D51D1128096B8FF8668AFDC41CBDED511D12D390105EFDDC";
+    let signing_public_hex = "03859B76317C8AA64F2D253D3547831E413F2663AE2568F7A17E85B283CC8861E4";
     let signing_secret_bytes = hex::decode(&signing_secret_hex).expect("unable to decode hex");
     let signing_public_bytes = hex::decode(&signing_public_hex).expect("unable to decode hex");
     let signing_secret_key = SecretKey::from_slice(signing_secret_bytes.as_slice())
         .expect("unable to create secret key");
-    let man_prefix: Vec<u8> = vec![b'M', b'A', b'N', 0];
 
     // 2. Create signable manifest with sequence, public key, signing public key (without signatures)
-    if master_public_bytes.len() != PUBLIC_KEY_SIZE {
-        panic!(
-            "invalid master public key length: {}",
-            master_public_bytes.len()
-        );
-    }
-    if signing_public_bytes.len() != PUBLIC_KEY_SIZE {
-        panic!(
-            "invalid signing public key length: {}",
-            signing_public_bytes.len()
-        );
-    }
+
+    assert_eq!(
+        master_public_bytes.len(),
+        PUBLIC_KEY_SIZE,
+        "invalid master public key length: {}",
+        master_public_bytes.len()
+    );
+    assert_eq!(
+        signing_public_bytes.len(),
+        PUBLIC_KEY_SIZE,
+        "invalid signing public key length: {}",
+        master_public_bytes.len()
+    );
+
     let signable_manifest =
         create_signable_manifest(1, &master_public_bytes, &signing_public_bytes);
 
     // 3. append manifest prefix
     let mut prefixed_signable: Vec<u8> = vec![0; signable_manifest.len() + 4];
-    prefixed_signable[0..4].clone_from_slice(man_prefix.as_slice());
+    prefixed_signable[0..4].clone_from_slice(b"MAN\x00");
     prefixed_signable[4..4 + signable_manifest.len()]
         .clone_from_slice(signable_manifest.clone().as_slice());
 
@@ -323,7 +319,7 @@ async fn c026() {
         .unicast(node.addr(), payload)
         .expect("unable to send message");
 
-    sleep(Duration::from_secs(300)).await;
+    sleep(Duration::from_secs(5)).await;
     synth_node.shut_down().await;
     node.stop().expect("unable to stop stateful node");
 }
