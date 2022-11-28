@@ -1,3 +1,5 @@
+use std::net::{IpAddr, Ipv4Addr};
+
 use pea2pea::{
     ConnectionSide,
     ConnectionSide::{Initiator, Responder},
@@ -55,10 +57,13 @@ async fn r001_t2_HANDSHAKE_reject_if_server_too_long() {
     // Start the first synthetic node. Set identification ('Server' header) for the value that's too long.
     let mut test_config = TestConfig::default();
     test_config.synth_node_config.ident = format!("{:8192}", 0);
+    test_config.pea2pea_config.listener_ip = Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 2)));
     let synth_node1 = SyntheticNode::new(&test_config).await;
 
     // Start the second synthetic node with the default 'Server' header.
-    let synth_node2 = SyntheticNode::new(&Default::default()).await;
+    let mut test_config2 = TestConfig::default();
+    test_config2.pea2pea_config.listener_ip = Some(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 3)));
+    let synth_node2 = SyntheticNode::new(&test_config2).await;
 
     // Build and start the Ripple node. Configure its peers such that it connects to the synthetic node above.
     let target = TempDir::new().expect("couldn't create a temporary directory");
@@ -78,7 +83,10 @@ async fn r001_t2_HANDSHAKE_reject_if_server_too_long() {
     );
 
     // Ensure the connection to the first synthetic node was rejected by the node.
-    assert!(!synth_node1.is_connected_ip(node.addr().ip()));
+    wait_until!(
+        CONNECTION_TIMEOUT,
+        !synth_node1.is_connected_ip(node.addr().ip())
+    );
 
     // Shutdown all nodes.
     synth_node1.shut_down().await;

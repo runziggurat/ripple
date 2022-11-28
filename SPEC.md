@@ -304,7 +304,7 @@ The test index makes use of symbolic language in describing connection and messa
     -> mtPROOF_PATH_REQ
     <- mtPROOF_PATH_RESPONSE
 
-### ZG-CONFORMANCE-015
+### ZG-CONFORMANCE-026
 
     The test client should send a valid mtVALIDATORLIST message, with both master and signature public keys, correctly serializing a manifest and validator blob.
     The create is done, but the result is not yet checked.  That will be done in a future task/PR.
