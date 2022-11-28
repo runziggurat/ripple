@@ -178,7 +178,7 @@ fn sign_buffer(secret_key: &SecretKey, buffer: &[u8]) -> Vec<u8> {
 fn sign_buffer_with_prefix(hash_prefix: &[u8], secret_key: &SecretKey, buffer: &[u8]) -> Vec<u8> {
     let mut prefixed_buffer = BytesMut::with_capacity(1024);
     prefixed_buffer.put(hash_prefix);
-    prefixed_buffer.extend_from_slice(&buffer);
+    prefixed_buffer.extend_from_slice(buffer);
 
     sign_buffer(secret_key, &prefixed_buffer)
 }
