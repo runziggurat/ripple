@@ -243,15 +243,15 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     let master_secret_hex = "8484781AE8EEB87D8A5AA38483B5CBBCCE6AD66B4185BB193DDDFAD5C1F4FC06";
     // The master public key should be in the validators.txt file, in ~/.ziggurat/ripple/setup
     let master_public_hex = "02ED521B8124454DD5B7769C813BD40E8D36E134DD51ACED873B49E165327F6DF2";
-    let master_secret_bytes = hex::decode(&master_secret_hex).expect("unable to decode hex");
-    let master_public_bytes = hex::decode(&master_public_hex).expect("unable to decode hex");
+    let master_secret_bytes = hex::decode(master_secret_hex).expect("unable to decode hex");
+    let master_public_bytes = hex::decode(master_public_hex).expect("unable to decode hex");
     let master_secret_key =
         SecretKey::from_slice(master_secret_bytes.as_slice()).expect("unable to create secret key");
 
     let signing_secret_hex = "00F963180681C0D1D51D1128096B8FF8668AFDC41CBDED511D12D390105EFDDC";
     let signing_public_hex = "03859B76317C8AA64F2D253D3547831E413F2663AE2568F7A17E85B283CC8861E4";
-    let signing_secret_bytes = hex::decode(&signing_secret_hex).expect("unable to decode hex");
-    let signing_public_bytes = hex::decode(&signing_public_hex).expect("unable to decode hex");
+    let signing_secret_bytes = hex::decode(signing_secret_hex).expect("unable to decode hex");
+    let signing_public_bytes = hex::decode(signing_public_hex).expect("unable to decode hex");
     let signing_secret_key = SecretKey::from_slice(signing_secret_bytes.as_slice())
         .expect("unable to create secret key");
 
@@ -295,7 +295,7 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     );
 
     // 7. Create Validator blob.
-    let validator_blob = create_validator_blob_json(&manifest, &master_public_hex);
+    let validator_blob = create_validator_blob_json(&manifest, master_public_hex);
     let bstr = base64::encode(&validator_blob);
     let blob_bytes = base64::decode(&bstr).expect("unable to decode a blob");
     let bb = bstr.as_bytes().to_vec();
