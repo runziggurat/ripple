@@ -171,6 +171,7 @@ fn sign_buffer(secret_key: &SecretKey, buffer: &[u8]) -> Vec<u8> {
     let message = Message::from_slice(&digest).unwrap();
     let signature = engine.sign_ecdsa(&message, secret_key).serialize_der();
     let signature_b64 = base64::encode(signature);
+
     base64::decode(signature_b64).expect("unable to decode a blob")
 }
 
@@ -178,7 +179,8 @@ fn sign_buffer_with_prefix(hash_prefix: &[u8], secret_key: &SecretKey, buffer: &
     let mut prefixed_buffer = BytesMut::with_capacity(1024);
     prefixed_buffer.put(hash_prefix);
     prefixed_buffer.extend_from_slice(&buffer);
-    return sign_buffer(secret_key, &prefixed_buffer);
+
+    sign_buffer(secret_key, &prefixed_buffer)
 }
 
 #[tokio::test]
