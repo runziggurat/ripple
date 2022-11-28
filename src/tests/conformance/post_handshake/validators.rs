@@ -6,6 +6,18 @@ use sha2::{Digest, Sha512};
 use tempfile::TempDir;
 use tokio::time::sleep;
 
+// serialization type field constants from rippled
+const ST_TAG_SEQUENCE: u8 = 0x24;
+const ST_TAG_VARIABLE_LENGTH_BASE: u8 = 0x70;
+const ST_TAG_PUBLIC_KEY: u8 = 0x71;
+const ST_TAG_SIGNING_PUBLIC_KEY: u8 = 0x73;
+const ST_TAG_SIGNATURE: u8 = 0x76;
+const ST_TAG_MASTER_SIGNATURE: u8 = 0x12;
+
+const ONE_YEAR: u32 = 86400 * 365;
+const JAN1_2000: u32 = 946684800;
+const SOME_SEQUENCE_NUMBER: u32 = 2022100501;
+
 use crate::{
     protocol::{
         codecs::message::{BinaryMessage, Payload},
@@ -38,6 +50,7 @@ struct ValidatorBlob {
 #[allow(non_snake_case)]
 async fn c015_TM_VALIDATOR_LIST_COLLECTION_node_should_send_validator_list() {
     // ZG-CONFORMANCE-015
+
     // Check for a TmValidatorListCollection message.
     let check = |m: &BinaryMessage| {
         if let Payload::TmValidatorListCollection(validator_list_collection) = &m.payload {
@@ -72,7 +85,7 @@ async fn c015_TM_VALIDATOR_LIST_COLLECTION_node_should_send_validator_list() {
     perform_expected_message_test(Default::default(), &check).await;
 }
 
-fn create_sha512_half_digest(buffer: &Vec<u8>) -> [u8; 32] {
+fn create_sha512_half_digest(buffer: &[u8]) -> [u8; 32] {
     let mut hasher = Sha512::new();
     hasher.update(buffer);
     let result = hasher.finalize();
@@ -83,133 +96,94 @@ fn create_sha512_half_digest(buffer: &Vec<u8>) -> [u8; 32] {
     signature
 }
 
-// run this to create a key pair.
-// use the strings to instantiate a SecretKey and PublicKey
-fn _gen_keys() {
-    let engine = Secp256k1::new();
-    let (private_key, public_key) = engine.generate_keypair(&mut secp256k1::rand::thread_rng());
-    let secret_bytes = private_key.secret_bytes();
-    let public_bytes = public_key.serialize();
-    let secret_hex = hex::encode_upper(secret_bytes);
-    let public_hex = hex::encode_upper(public_bytes);
-    println!("secret key hex string {}", secret_hex);
-    println!("public key hex string {}", public_hex);
-}
-
-fn create_validator_blob_json(manifest: &Vec<u8>, pkstr: &str) -> String {
-    let mstr = base64::encode(manifest);
-    let v = Validator {
-        validation_public_key: pkstr.to_owned(),
-        manifest: mstr,
-    };
-    // let mut vvec: Vec<Validator> = Vec::new();
-    // vvec.push(v);
-    let vvec: Vec<Validator> = vec![v];
-
-    // Set expiration to 1 year from now.
-    // validator blob uses delta from Jan 1 2000,
+fn get_expiration() -> u32 {
+    // expiration  = now + 1 year.
+    // however, validator blob uses delta from Jan 1 2000,
     // and not 1970, per Unix epoch time
+    // so we subtract time for January 1 2000
     let start = SystemTime::now();
     let epoch = start
         .duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
     let now = epoch.as_secs() as u32;
-    let jan1_2000: u32 = 946684800;
-    let year: u32 = 86400 * 365;
-    let expiration: u32 = now + year - jan1_2000;
+    let year: u32 = ONE_YEAR;
+    now + year - JAN1_2000
+}
+
+fn create_validator_blob_json(manifest: &[u8], public_key: &str) -> String {
+    let manifest = base64::encode(manifest);
+    let v = Validator {
+        validation_public_key: public_key.to_string(),
+        manifest: manifest,
+    };
+    let vvec: Vec<Validator> = vec![v];
 
     let vblob = ValidatorBlob {
-        sequence: 2022100501,
-        expiration,
+        sequence: SOME_SEQUENCE_NUMBER,
+        expiration: get_expiration(),
         validators: vvec,
     };
     serde_json::to_string(&vblob).unwrap()
 }
 
-fn create_signable_manifest(
-    sequence: u32,
-    public_key: &Vec<u8>,
-    signing_pub_key: &Vec<u8>,
-) -> Vec<u8> {
-    let size = 5 + 2 + public_key.len() + 2 + signing_pub_key.len();
-    let mut manifest: Vec<u8> = vec![0; size];
-    manifest[0] = 0x24;
+fn create_signable_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &[u8]) -> Vec<u8> {
+    let mut manifest: Vec<u8> = vec![0; 5];
+    manifest[0] = ST_TAG_SEQUENCE;
     manifest[1] = ((sequence >> 24) & 0xff) as u8;
     manifest[2] = ((sequence >> 16) & 0xff) as u8;
     manifest[3] = ((sequence >> 8) & 0xff) as u8;
     manifest[4] = (sequence & 0xff) as u8;
-    let mut i = 5;
 
     // serialize public key
-    manifest[i] = 0x71; // field code 1 for "PublicKey"
-    manifest[i + 1] = PUBLIC_KEY_SIZE as u8;
-    i += 2;
-    manifest[i..i + PUBLIC_KEY_SIZE].clone_from_slice(public_key.as_slice());
-    i += PUBLIC_KEY_SIZE;
+    manifest.push(ST_TAG_PUBLIC_KEY);
+    manifest.push(PUBLIC_KEY_SIZE as u8);
+    manifest.extend_from_slice(public_key);
 
     // serialize signing public key
-    manifest[i] = 0x73; // field code 3 for "SigningPubKey"
-    manifest[i + 1] = PUBLIC_KEY_SIZE as u8;
-    i += 2;
-    manifest[i..i + PUBLIC_KEY_SIZE].clone_from_slice(signing_pub_key.as_slice());
+    manifest.push(ST_TAG_SIGNING_PUBLIC_KEY);
+    manifest.push(PUBLIC_KEY_SIZE as u8);
+    manifest.extend_from_slice(signing_pub_key);
     manifest
 }
 
 fn create_final_manifest(
     sequence: u32,
-    public_key: &Vec<u8>,
-    signing_pub_key: &Vec<u8>,
-    master_signature: &Vec<u8>,
-    signature: &Vec<u8>,
+    public_key: &[u8],
+    signing_pub_key: &[u8],
+    master_signature: &[u8],
+    signature: &[u8],
 ) -> Vec<u8> {
-    let size = 5
-        + 2
-        + public_key.len()
-        + 2
-        + signing_pub_key.len()
-        + 3
-        + master_signature.len()
-        + 2
-        + signature.len();
-    let mut manifest: Vec<u8> = vec![0; size];
-    manifest[0] = 0x24;
+    let mut manifest: Vec<u8> = vec![0; 5];
+    manifest[0] = ST_TAG_SEQUENCE;
     manifest[1] = ((sequence >> 24) & 0xff) as u8;
     manifest[2] = ((sequence >> 16) & 0xff) as u8;
     manifest[3] = ((sequence >> 8) & 0xff) as u8;
     manifest[4] = (sequence & 0xff) as u8;
-    let mut i = 5;
 
     // serialize public key
-    manifest[i] = 0x71; // field code 1 for "PublicKey"
-    manifest[i + 1] = PUBLIC_KEY_SIZE as u8;
-    i += 2;
-    manifest[i..i + PUBLIC_KEY_SIZE].clone_from_slice(public_key.as_slice());
-    i += PUBLIC_KEY_SIZE;
+    manifest.push(ST_TAG_PUBLIC_KEY);
+    manifest.push(PUBLIC_KEY_SIZE as u8);
+    manifest.extend_from_slice(public_key);
 
     // serialize signing public key
-    manifest[i] = 0x73; // field code 3 for "SigningPubKey"
-    manifest[i + 1] = PUBLIC_KEY_SIZE as u8;
-    i += 2;
-    manifest[i..i + PUBLIC_KEY_SIZE].clone_from_slice(signing_pub_key.as_slice());
-    i += PUBLIC_KEY_SIZE;
+    manifest.push(ST_TAG_SIGNING_PUBLIC_KEY);
+    manifest.push(PUBLIC_KEY_SIZE as u8);
+    manifest.extend_from_slice(signing_pub_key);
 
     // serialize signature
-    manifest[i] = 0x76; // field code 6 for "Signature"
-    manifest[i + 1] = signature.len() as u8;
-    i += 2;
-    manifest[i..i + signature.len()].clone_from_slice(signature.as_slice());
-    i += signature.len();
+    manifest.push(ST_TAG_SIGNATURE);
+    manifest.push(signature.len() as u8);
+    manifest.extend_from_slice(signature);
 
     // serialize master signature
-    manifest[i] = 0x70; // field code 18 for "MasterSignature"
-    manifest[i + 1] = 0x12;
-    manifest[i + 2] = master_signature.len() as u8;
-    i += 3;
-    manifest[i..i + master_signature.len()].clone_from_slice(master_signature.as_slice());
+    manifest.push(ST_TAG_VARIABLE_LENGTH_BASE);
+    manifest.push(ST_TAG_MASTER_SIGNATURE);
+    manifest.push(master_signature.len() as u8);
+    manifest.extend_from_slice(master_signature);
     manifest
 }
 
-fn sign_buffer(secret_key: &SecretKey, buffer: &Vec<u8>) -> Vec<u8> {
+fn sign_buffer(secret_key: &SecretKey, buffer: &[u8]) -> Vec<u8> {
     let engine = Secp256k1::new();
     let digest = create_sha512_half_digest(buffer);
     let message = Message::from_slice(&digest).unwrap();
@@ -318,6 +292,9 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     synth_node
         .unicast(node.addr(), payload)
         .expect("unable to send message");
+
+    // TODO: confirm result from rippled that the message was valid
+    // will be done in new PR
 
     sleep(Duration::from_secs(5)).await;
     synth_node.shut_down().await;
