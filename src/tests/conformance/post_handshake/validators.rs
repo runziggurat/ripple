@@ -17,7 +17,8 @@ const ST_TAG_MASTER_SIGNATURE: u8 = 0x12;
 
 const ONE_YEAR: u32 = 86400 * 365;
 const JAN1_2000: u32 = 946684800;
-const SOME_SEQUENCE_NUMBER: u32 = 2022100501;
+const RAND_SEQUENCE_NUMBER: u32 = 2022100501;
+const MANIFEST_PREFIX: &[u8] = b"MAN\x00";
 
 use crate::{
     protocol::{
@@ -105,29 +106,27 @@ fn get_expiration() -> u32 {
     let start = SystemTime::now();
     let epoch = start
         .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
+        .expect("time went backwards");
     let now = epoch.as_secs() as u32;
     let year: u32 = ONE_YEAR;
     now + year - JAN1_2000
 }
 
 fn create_validator_blob_json(manifest: &[u8], public_key: &str) -> String {
-    let manifest = base64::encode(manifest);
-    let v = Validator {
+    let validator = Validator {
         validation_public_key: public_key.to_string(),
-        manifest,
+        manifest: base64::encode(manifest),
     };
-    let vvec: Vec<Validator> = vec![v];
 
     let vblob = ValidatorBlob {
-        sequence: SOME_SEQUENCE_NUMBER,
+        sequence: RAND_SEQUENCE_NUMBER,
         expiration: get_expiration(),
-        validators: vvec,
+        validators: vec![validator],
     };
     serde_json::to_string(&vblob).unwrap()
 }
 
-fn create_signable_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &[u8]) -> BytesMut {
+fn create_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &[u8]) -> BytesMut {
     let mut buf = BytesMut::with_capacity(1024);
 
     buf.put_u8(ST_TAG_SEQUENCE);
@@ -142,30 +141,15 @@ fn create_signable_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &
     buf.put_u8(ST_TAG_SIGNING_PUBLIC_KEY);
     buf.put_u8(PUBLIC_KEY_SIZE as u8);
     buf.extend_from_slice(signing_pub_key);
+
     buf
 }
 
-fn create_final_manifest(
-    sequence: u32,
-    public_key: &[u8],
-    signing_pub_key: &[u8],
-    master_signature: &[u8],
-    signature: &[u8],
-) -> BytesMut {
+fn sign_manifest(manifest: &[u8], master_signature: &[u8], signature: &[u8]) -> BytesMut {
     let mut buf = BytesMut::with_capacity(1024);
 
-    buf.put_u8(ST_TAG_SEQUENCE);
-    buf.put_u32(sequence);
-
-    // serialize public key
-    buf.put_u8(ST_TAG_PUBLIC_KEY);
-    buf.put_u8(PUBLIC_KEY_SIZE as u8);
-    buf.extend_from_slice(public_key);
-
-    // serialize signing public key
-    buf.put_u8(ST_TAG_SIGNING_PUBLIC_KEY);
-    buf.put_u8(PUBLIC_KEY_SIZE as u8);
-    buf.extend_from_slice(signing_pub_key);
+    // copy manifest into buffer
+    buf.extend_from_slice(manifest);
 
     // serialize signature
     buf.put_u8(ST_TAG_SIGNATURE);
@@ -177,6 +161,7 @@ fn create_final_manifest(
     buf.put_u8(ST_TAG_MASTER_SIGNATURE);
     buf.put_u8(master_signature.len() as u8);
     buf.extend_from_slice(master_signature);
+
     buf
 }
 
@@ -184,10 +169,16 @@ fn sign_buffer(secret_key: &SecretKey, buffer: &[u8]) -> Vec<u8> {
     let engine = Secp256k1::new();
     let digest = create_sha512_half_digest(buffer);
     let message = Message::from_slice(&digest).unwrap();
-    let sig = engine.sign_ecdsa(&message, secret_key);
-    let sigser = sig.serialize_der();
-    let sigb64 = base64::encode(sigser);
-    base64::decode(sigb64).expect("unable to decode a blob")
+    let signature = engine.sign_ecdsa(&message, secret_key).serialize_der();
+    let signature_b64 = base64::encode(signature);
+    base64::decode(signature_b64).expect("unable to decode a blob")
+}
+
+fn sign_buffer_with_prefix(hash_prefix: &[u8], secret_key: &SecretKey, buffer: &[u8]) -> Vec<u8> {
+    let mut prefixed_buffer = BytesMut::with_capacity(1024);
+    prefixed_buffer.put(hash_prefix);
+    prefixed_buffer.extend_from_slice(&buffer);
+    return sign_buffer(secret_key, &prefixed_buffer);
 }
 
 #[tokio::test]
@@ -239,48 +230,40 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         "invalid signing public key length: {}",
         master_public_bytes.len()
     );
-    let signable_manifest =
-        create_signable_manifest(1, &master_public_bytes, &signing_public_bytes);
+    let manifest = create_manifest(1, &master_public_bytes, &signing_public_bytes);
 
     // 3. append manifest prefix
-    let mut prefixed_signable = BytesMut::with_capacity(1024);
-    prefixed_signable.put(&b"MAN\x00"[..]);
-    prefixed_signable.extend_from_slice(&signable_manifest);
+    //let mut prefixed_signable = BytesMut::with_capacity(1024);
 
-    // 4. Sign the signable manifest with master secret key, get master signature
-    let master_signature_bytes = sign_buffer(&master_secret_key, &prefixed_signable);
+    // 3. Sign the signable manifest with master secret key, get master signature
+    let master_signature_bytes =
+        sign_buffer_with_prefix(MANIFEST_PREFIX, &master_secret_key, &manifest);
 
-    // 5. Sign it with signing private key, get signature
-    let signature_bytes = sign_buffer(&signing_secret_key, &prefixed_signable);
+    // 4. Sign it with signing private key, get signature
+    let signature_bytes = sign_buffer_with_prefix(MANIFEST_PREFIX, &signing_secret_key, &manifest);
 
-    // 6. Create final manifest with sequence, public key, signing public key, master signature, signature
-    let manifest = create_final_manifest(
-        1,
-        &master_public_bytes,
-        &signing_public_bytes,
-        &master_signature_bytes,
-        &signature_bytes,
-    );
+    // 5. Create final manifest with sequence, public key, signing public key, master signature, signature
+    let signed_manifest = sign_manifest(&manifest, &master_signature_bytes, &signature_bytes);
 
     // 7. Create Validator blob.
-    let validator_blob = create_validator_blob_json(&manifest, master_public_hex);
-    let bstr = base64::encode(&validator_blob);
-    let blob_bytes = base64::decode(&bstr).expect("unable to decode a blob");
-    let bb = bstr.as_bytes().to_vec();
+    let blob = create_validator_blob_json(&signed_manifest, master_public_hex);
+    let blob_b64 = base64::encode(&blob);
+    let blob_bytes = base64::decode(&blob_b64).expect("unable to decode a blob");
 
     // 8.  Get signature for blob using master private key
-    let blob_signature_bytes = sign_buffer(&signing_secret_key, &blob_bytes);
+    let signature = sign_buffer(&signing_secret_key, &blob_bytes);
 
     // 9. Setup payload, send it
-    let mstr = base64::encode(manifest);
-    let mb = mstr.as_bytes().to_vec();
-    let sstr = hex::encode_upper(blob_signature_bytes);
-    let sb = sstr.as_bytes().to_vec();
+    let manifest_b64 = base64::encode(signed_manifest);
+    let manifest_b64_bytes = manifest_b64.as_bytes().to_vec();
+    let siganture_hex = hex::encode_upper(signature);
+    let siganture_hex_bytes = siganture_hex.as_bytes().to_vec();
+    let blob_b64_bytes = blob_b64.as_bytes().to_vec();
 
     let payload = Payload::TmValidatorList(TmValidatorList {
-        manifest: mb,
-        blob: bb,
-        signature: sb,
+        manifest: manifest_b64_bytes,
+        blob: blob_b64_bytes,
+        signature: siganture_hex_bytes,
         version: 1,
     });
     synth_node
