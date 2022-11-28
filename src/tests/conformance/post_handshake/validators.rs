@@ -114,7 +114,7 @@ fn create_validator_blob_json(manifest: &[u8], public_key: &str) -> String {
     let manifest = base64::encode(manifest);
     let v = Validator {
         validation_public_key: public_key.to_string(),
-        manifest: manifest,
+        manifest,
     };
     let vvec: Vec<Validator> = vec![v];
 
