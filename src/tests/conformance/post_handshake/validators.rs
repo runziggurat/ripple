@@ -1,5 +1,6 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use bytes::{BufMut, BytesMut};
 use secp256k1::{constants::PUBLIC_KEY_SIZE, Message, Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha512};
@@ -126,24 +127,22 @@ fn create_validator_blob_json(manifest: &[u8], public_key: &str) -> String {
     serde_json::to_string(&vblob).unwrap()
 }
 
-fn create_signable_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &[u8]) -> Vec<u8> {
-    let mut manifest: Vec<u8> = vec![0; 5];
-    manifest[0] = ST_TAG_SEQUENCE;
-    manifest[1] = ((sequence >> 24) & 0xff) as u8;
-    manifest[2] = ((sequence >> 16) & 0xff) as u8;
-    manifest[3] = ((sequence >> 8) & 0xff) as u8;
-    manifest[4] = (sequence & 0xff) as u8;
+fn create_signable_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &[u8]) -> BytesMut {
+    let mut buf = BytesMut::with_capacity(1024);
+
+    buf.put_u8(ST_TAG_SEQUENCE);
+    buf.put_u32(sequence);
 
     // serialize public key
-    manifest.push(ST_TAG_PUBLIC_KEY);
-    manifest.push(PUBLIC_KEY_SIZE as u8);
-    manifest.extend_from_slice(public_key);
+    buf.put_u8(ST_TAG_PUBLIC_KEY);
+    buf.put_u8(PUBLIC_KEY_SIZE as u8);
+    buf.extend_from_slice(public_key);
 
     // serialize signing public key
-    manifest.push(ST_TAG_SIGNING_PUBLIC_KEY);
-    manifest.push(PUBLIC_KEY_SIZE as u8);
-    manifest.extend_from_slice(signing_pub_key);
-    manifest
+    buf.put_u8(ST_TAG_SIGNING_PUBLIC_KEY);
+    buf.put_u8(PUBLIC_KEY_SIZE as u8);
+    buf.extend_from_slice(signing_pub_key);
+    buf
 }
 
 fn create_final_manifest(
@@ -152,35 +151,33 @@ fn create_final_manifest(
     signing_pub_key: &[u8],
     master_signature: &[u8],
     signature: &[u8],
-) -> Vec<u8> {
-    let mut manifest: Vec<u8> = vec![0; 5];
-    manifest[0] = ST_TAG_SEQUENCE;
-    manifest[1] = ((sequence >> 24) & 0xff) as u8;
-    manifest[2] = ((sequence >> 16) & 0xff) as u8;
-    manifest[3] = ((sequence >> 8) & 0xff) as u8;
-    manifest[4] = (sequence & 0xff) as u8;
+) -> BytesMut {
+    let mut buf = BytesMut::with_capacity(1024);
+
+    buf.put_u8(ST_TAG_SEQUENCE);
+    buf.put_u32(sequence);
 
     // serialize public key
-    manifest.push(ST_TAG_PUBLIC_KEY);
-    manifest.push(PUBLIC_KEY_SIZE as u8);
-    manifest.extend_from_slice(public_key);
+    buf.put_u8(ST_TAG_PUBLIC_KEY);
+    buf.put_u8(PUBLIC_KEY_SIZE as u8);
+    buf.extend_from_slice(public_key);
 
     // serialize signing public key
-    manifest.push(ST_TAG_SIGNING_PUBLIC_KEY);
-    manifest.push(PUBLIC_KEY_SIZE as u8);
-    manifest.extend_from_slice(signing_pub_key);
+    buf.put_u8(ST_TAG_SIGNING_PUBLIC_KEY);
+    buf.put_u8(PUBLIC_KEY_SIZE as u8);
+    buf.extend_from_slice(signing_pub_key);
 
     // serialize signature
-    manifest.push(ST_TAG_SIGNATURE);
-    manifest.push(signature.len() as u8);
-    manifest.extend_from_slice(signature);
+    buf.put_u8(ST_TAG_SIGNATURE);
+    buf.put_u8(signature.len() as u8);
+    buf.extend_from_slice(signature);
 
     // serialize master signature
-    manifest.push(ST_TAG_VARIABLE_LENGTH_BASE);
-    manifest.push(ST_TAG_MASTER_SIGNATURE);
-    manifest.push(master_signature.len() as u8);
-    manifest.extend_from_slice(master_signature);
-    manifest
+    buf.put_u8(ST_TAG_VARIABLE_LENGTH_BASE);
+    buf.put_u8(ST_TAG_MASTER_SIGNATURE);
+    buf.put_u8(master_signature.len() as u8);
+    buf.extend_from_slice(master_signature);
+    buf
 }
 
 fn sign_buffer(secret_key: &SecretKey, buffer: &[u8]) -> Vec<u8> {
@@ -230,7 +227,6 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         .expect("unable to create secret key");
 
     // 2. Create signable manifest with sequence, public key, signing public key (without signatures)
-
     assert_eq!(
         master_public_bytes.len(),
         PUBLIC_KEY_SIZE,
@@ -243,15 +239,13 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         "invalid signing public key length: {}",
         master_public_bytes.len()
     );
-
     let signable_manifest =
         create_signable_manifest(1, &master_public_bytes, &signing_public_bytes);
 
     // 3. append manifest prefix
-    let mut prefixed_signable: Vec<u8> = vec![0; signable_manifest.len() + 4];
-    prefixed_signable[0..4].clone_from_slice(b"MAN\x00");
-    prefixed_signable[4..4 + signable_manifest.len()]
-        .clone_from_slice(signable_manifest.clone().as_slice());
+    let mut prefixed_signable = BytesMut::with_capacity(1024);
+    prefixed_signable.put(&b"MAN\x00"[..]);
+    prefixed_signable.extend_from_slice(&signable_manifest);
 
     // 4. Sign the signable manifest with master secret key, get master signature
     let master_signature_bytes = sign_buffer(&master_secret_key, &prefixed_signable);
