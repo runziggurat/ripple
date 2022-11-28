@@ -312,6 +312,18 @@ The test index makes use of symbolic language in describing connection and messa
     <>
     <- mtVALIDATORLIST sent with master and signing public keys and a correctly serialized manifest and validator blob.
 
+## Performance
+
+### ZG-PERFORMANCE-001
+
+    The node behaves as expected under load from other peers.
+    1. Establish a node and synthetic peers.
+    2. Begin simulation.
+    3. Introspect node health and responsiveness through peers (latency, throughput). This could be done using `Ping`/`Pong` messages.
+    There can be different errors during testing: broken pipes to signal established but suddenly lost connections,
+    InvalidData errors to indicate that connection couldn't be established at all or timeout errors to indicate
+    that data has not been received in timely manner.
+
 ## Resistance
 
 ### ZG-RESISTANCE-001
