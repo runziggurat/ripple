@@ -175,6 +175,12 @@ impl NodeBuilder {
         self
     }
 
+    /// Sets initial peers for the node.
+    pub fn max_peers(mut self, max_peers: usize) -> Self {
+        self.conf.max_peers = max_peers;
+        self
+    }
+
     /// Sets validator token to be placed in rippled.cfg.
     /// This will configure the node to run as a validator.
     pub fn validator_token(mut self, token: String) -> Self {
