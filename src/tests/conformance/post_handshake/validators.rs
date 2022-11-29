@@ -219,7 +219,7 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     let signing_secret_key = SecretKey::from_slice(signing_secret_bytes.as_slice())
         .expect("unable to create secret key");
 
-    // 2. Create signable manifest with sequence, public key, signing public key (without signatures)
+    // 2. Create manifest with sequence, public key, signing public key (without signatures)
     assert_eq!(
         master_public_bytes.len(),
         PUBLIC_KEY_SIZE,
@@ -234,28 +234,25 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     );
     let manifest = create_manifest(1, &master_public_bytes, &signing_public_bytes);
 
-    // 3. append manifest prefix
-    //let mut prefixed_signable = BytesMut::with_capacity(1024);
-
-    // 3. Sign the signable manifest with master secret key, get master signature
+    // 3. Sign the manifest with master secret key, get master signature
     let master_signature_bytes =
         sign_buffer_with_prefix(MANIFEST_PREFIX, &master_secret_key, &manifest);
 
     // 4. Sign it with signing private key, get signature
     let signature_bytes = sign_buffer_with_prefix(MANIFEST_PREFIX, &signing_secret_key, &manifest);
 
-    // 5. Create final manifest with sequence, public key, signing public key, master signature, signature
+    // 5. Create signed manifest with sequence, public key, signing public key, master signature, signature
     let signed_manifest = sign_manifest(&manifest, &master_signature_bytes, &signature_bytes);
 
-    // 7. Create Validator blob.
+    // 6. Create Validator blob.
     let blob = create_validator_blob_json(&signed_manifest, master_public_hex);
     let blob_b64 = base64::encode(&blob);
     let blob_bytes = base64::decode(&blob_b64).expect("unable to decode a blob");
 
-    // 8.  Get signature for blob using master private key
+    // 7.  Get signature for blob using master private key
     let signature = sign_buffer(&signing_secret_key, &blob_bytes);
 
-    // 9. Setup payload, send it
+    // 8. Setup payload, send it
     let manifest_b64 = base64::encode(signed_manifest);
     let manifest_b64_bytes = manifest_b64.as_bytes().to_vec();
     let signature_hex = hex::encode_upper(signature);
