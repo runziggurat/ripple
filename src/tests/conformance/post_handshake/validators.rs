@@ -258,14 +258,14 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     // 9. Setup payload, send it
     let manifest_b64 = base64::encode(signed_manifest);
     let manifest_b64_bytes = manifest_b64.as_bytes().to_vec();
-    let siganture_hex = hex::encode_upper(signature);
-    let siganture_hex_bytes = siganture_hex.as_bytes().to_vec();
+    let signature_hex = hex::encode_upper(signature);
+    let signature_hex_bytes = signature_hex.as_bytes().to_vec();
     let blob_b64_bytes = blob_b64.as_bytes().to_vec();
 
     let payload = Payload::TmValidatorList(TmValidatorList {
         manifest: manifest_b64_bytes,
         blob: blob_b64_bytes,
-        signature: siganture_hex_bytes,
+        signature: signature_hex_bytes,
         version: 1,
     });
     synth_node
