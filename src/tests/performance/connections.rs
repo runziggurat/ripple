@@ -1,4 +1,7 @@
-use std::{net::SocketAddr, time::Duration};
+use std::{
+    net::SocketAddr,
+    time::{Duration, Instant},
+};
 
 use tabled::{Table, Tabled};
 use tempfile::TempDir;
@@ -64,7 +67,7 @@ async fn p002_connections_load_() {
     //
 
     // maximum time allowed for a single iteration of the test
-    const MAX_ITER_TIME: Duration = Duration::from_secs(20);
+    const MAX_ITER_TIME: Duration = Duration::from_secs(25);
 
     /// maximum peers to configure node with
     const MAX_PEERS: u16 = 50;
@@ -97,11 +100,10 @@ async fn p002_connections_load_() {
         let (handshake_tx, mut handshake_rx) =
             tokio::sync::mpsc::channel::<()>(synth_count as usize);
 
-        let test_start = tokio::time::Instant::now();
+        let test_start = Instant::now();
 
         // start synthetic nodes
         for _ in 0..synth_count {
-            let node_addr = node.addr();
 
             let (exit_tx, exit_rx) = tokio::sync::oneshot::channel::<()>();
             synth_exits.push(exit_tx);
@@ -176,15 +178,13 @@ async fn simulate_peer(node_addr: SocketAddr, handshake_complete: Sender<()>) {
         }
     };
 
-    // Keep connection alive by replying to incoming Pings etc,
-    // and check for terminated connection.
-    //
+    // Keep connection alive by consuming messages
     loop {
         match synth_node
-            .recv_message_timeout(Duration::from_millis(300))
+            .recv_message_timeout(Duration::from_millis(200))
             .await
         {
-            Ok((_, message)) => continue,   // consume every message ignoring it
+            Ok((_, _message)) => continue,   // consume every message ignoring it
             Err(_timeout) => {
                 // check for broken connection
                 if !synth_node.is_connected(node_addr) {
