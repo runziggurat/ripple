@@ -20,6 +20,12 @@ const JAN1_2000: u32 = 946684800;
 const RAND_SEQUENCE_NUMBER: u32 = 2022100501;
 const MANIFEST_PREFIX: &[u8] = b"MAN\x00";
 
+// The master public key should be in the validators.txt file, in ~/.ziggurat/ripple/setup
+const MASTER_SECRET: &str = "8484781AE8EEB87D8A5AA38483B5CBBCCE6AD66B4185BB193DDDFAD5C1F4FC06";
+const MASTER_PUBLIC: &str = "02ED521B8124454DD5B7769C813BD40E8D36E134DD51ACED873B49E165327F6DF2";
+const SIGNING_SECRET: &str = "00F963180681C0D1D51D1128096B8FF8668AFDC41CBDED511D12D390105EFDDC";
+const SIGNING_PUBLIC: &str = "03859B76317C8AA64F2D253D3547831E413F2663AE2568F7A17E85B283CC8861E4";
+
 use crate::{
     protocol::{
         codecs::message::{BinaryMessage, Payload},
@@ -145,24 +151,19 @@ fn create_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &[u8]) -> 
     buf
 }
 
-fn sign_manifest(manifest: &[u8], master_signature: &[u8], signature: &[u8]) -> BytesMut {
-    let mut buf = BytesMut::with_capacity(1024);
-
-    // copy manifest into buffer
-    buf.extend_from_slice(manifest);
-
+fn sign_manifest(mut manifest: BytesMut, master_signature: &[u8], signature: &[u8]) -> BytesMut{
     // serialize signature
-    buf.put_u8(ST_TAG_SIGNATURE);
-    buf.put_u8(signature.len() as u8);
-    buf.extend_from_slice(signature);
+    manifest.put_u8(ST_TAG_SIGNATURE);
+    manifest.put_u8(signature.len() as u8);
+    manifest.extend_from_slice(signature);
 
     // serialize master signature
-    buf.put_u8(ST_TAG_VARIABLE_LENGTH_BASE);
-    buf.put_u8(ST_TAG_MASTER_SIGNATURE);
-    buf.put_u8(master_signature.len() as u8);
-    buf.extend_from_slice(master_signature);
+    manifest.put_u8(ST_TAG_VARIABLE_LENGTH_BASE);
+    manifest.put_u8(ST_TAG_MASTER_SIGNATURE);
+    manifest.put_u8(master_signature.len() as u8);
+    manifest.extend_from_slice(master_signature);
 
-    buf
+    manifest
 }
 
 fn sign_buffer(secret_key: &SecretKey, buffer: &[u8]) -> Vec<u8> {
@@ -204,35 +205,30 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         .expect("unable to connect");
 
     // 1. Setup keys & prefix.  Both master and signing key pairs have been previously generated.
-    let master_secret_hex = "8484781AE8EEB87D8A5AA38483B5CBBCCE6AD66B4185BB193DDDFAD5C1F4FC06";
-    // The master public key should be in the validators.txt file, in ~/.ziggurat/ripple/setup
-    let master_public_hex = "02ED521B8124454DD5B7769C813BD40E8D36E134DD51ACED873B49E165327F6DF2";
-    let master_secret_bytes = hex::decode(master_secret_hex).expect("unable to decode hex");
-    let master_public_bytes = hex::decode(master_public_hex).expect("unable to decode hex");
+    let master_secret = hex::decode(MASTER_SECRET).expect("unable to decode hex");
+    let master_public = hex::decode(MASTER_PUBLIC).expect("unable to decode hex");
     let master_secret_key =
-        SecretKey::from_slice(master_secret_bytes.as_slice()).expect("unable to create secret key");
+        SecretKey::from_slice(master_secret.as_slice()).expect("unable to create secret key");
 
-    let signing_secret_hex = "00F963180681C0D1D51D1128096B8FF8668AFDC41CBDED511D12D390105EFDDC";
-    let signing_public_hex = "03859B76317C8AA64F2D253D3547831E413F2663AE2568F7A17E85B283CC8861E4";
-    let signing_secret_bytes = hex::decode(signing_secret_hex).expect("unable to decode hex");
-    let signing_public_bytes = hex::decode(signing_public_hex).expect("unable to decode hex");
-    let signing_secret_key = SecretKey::from_slice(signing_secret_bytes.as_slice())
+    let signing_secret = hex::decode(SIGNING_SECRET).expect("unable to decode hex");
+    let signing_public = hex::decode(SIGNING_PUBLIC).expect("unable to decode hex");
+    let signing_secret_key = SecretKey::from_slice(signing_secret.as_slice())
         .expect("unable to create secret key");
 
     // 2. Create manifest with sequence, public key, signing public key (without signatures)
     assert_eq!(
-        master_public_bytes.len(),
+        master_public.len(),
         PUBLIC_KEY_SIZE,
         "invalid master public key length: {}",
-        master_public_bytes.len()
+        master_public.len()
     );
     assert_eq!(
-        signing_public_bytes.len(),
+        signing_public.len(),
         PUBLIC_KEY_SIZE,
         "invalid signing public key length: {}",
-        master_public_bytes.len()
+        master_public.len()
     );
-    let manifest = create_manifest(1, &master_public_bytes, &signing_public_bytes);
+    let manifest = create_manifest(1, &master_public, &signing_public);
 
     // 3. Sign the manifest with master secret key, get master signature
     let master_signature_bytes =
@@ -242,27 +238,23 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     let signature_bytes = sign_buffer_with_prefix(MANIFEST_PREFIX, &signing_secret_key, &manifest);
 
     // 5. Create signed manifest with sequence, public key, signing public key, master signature, signature
-    let signed_manifest = sign_manifest(&manifest, &master_signature_bytes, &signature_bytes);
+    let signed_manifest = sign_manifest(manifest, &master_signature_bytes, &signature_bytes);
 
     // 6. Create Validator blob.
-    let blob = create_validator_blob_json(&signed_manifest, master_public_hex);
-    let blob_b64 = base64::encode(&blob);
-    let blob_bytes = base64::decode(&blob_b64).expect("unable to decode a blob");
+    let blob = create_validator_blob_json(&signed_manifest, MASTER_PUBLIC);
 
     // 7.  Get signature for blob using master private key
-    let signature = sign_buffer(&signing_secret_key, &blob_bytes);
-
+    let signature = sign_buffer(&signing_secret_key, blob.as_bytes());
+ 
     // 8. Setup payload, send it
-    let manifest_b64 = base64::encode(signed_manifest);
-    let manifest_b64_bytes = manifest_b64.as_bytes().to_vec();
-    let signature_hex = hex::encode_upper(signature);
-    let signature_hex_bytes = signature_hex.as_bytes().to_vec();
-    let blob_b64_bytes = blob_b64.as_bytes().to_vec();
+    let manifest = base64::encode(signed_manifest).as_bytes().to_vec();
+    let signature = hex::encode_upper(signature).as_bytes().to_vec();
+    let blob = base64::encode(&blob).as_bytes().to_vec();
 
     let payload = Payload::TmValidatorList(TmValidatorList {
-        manifest: manifest_b64_bytes,
-        blob: blob_b64_bytes,
-        signature: signature_hex_bytes,
+        manifest,
+        blob,
+        signature,
         version: 1,
     });
     synth_node
