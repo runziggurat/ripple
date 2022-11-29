@@ -151,7 +151,7 @@ fn create_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &[u8]) -> 
     buf
 }
 
-fn sign_manifest(mut manifest: BytesMut, master_signature: &[u8], signature: &[u8]) -> BytesMut{
+fn sign_manifest(mut manifest: BytesMut, master_signature: &[u8], signature: &[u8]) -> BytesMut {
     // serialize signature
     manifest.put_u8(ST_TAG_SIGNATURE);
     manifest.put_u8(signature.len() as u8);
@@ -212,8 +212,8 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
 
     let signing_secret = hex::decode(SIGNING_SECRET).expect("unable to decode hex");
     let signing_public = hex::decode(SIGNING_PUBLIC).expect("unable to decode hex");
-    let signing_secret_key = SecretKey::from_slice(signing_secret.as_slice())
-        .expect("unable to create secret key");
+    let signing_secret_key =
+        SecretKey::from_slice(signing_secret.as_slice()).expect("unable to create secret key");
 
     // 2. Create manifest with sequence, public key, signing public key (without signatures)
     assert_eq!(
@@ -245,7 +245,7 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
 
     // 7.  Get signature for blob using master private key
     let signature = sign_buffer(&signing_secret_key, blob.as_bytes());
- 
+
     // 8. Setup payload, send it
     let manifest = base64::encode(signed_manifest).as_bytes().to_vec();
     let signature = hex::encode_upper(signature).as_bytes().to_vec();
