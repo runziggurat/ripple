@@ -6,10 +6,11 @@ The Ziggurat implementation for XRPLF's `rippled` nodes.
 
 1. Clone this repository.
 2. Build [rippled](https://github.com/XRPLF/rippled) from source.
-3. Create the `~/.ziggurat/ripple/setup` directories, copy the [validators configuration](https://github.com/XRPLF/rippled/blob/develop/cfg/validators-example.txt) there, and name it `validators.txt`:
-    ```
-    curl --create-dirs --output ~/.ziggurat/ripple/setup/validators.txt https://raw.githubusercontent.com/XRPLF/rippled/develop/cfg/validators-example.txt
-    ```
+3. Create the `~/.ziggurat/ripple/setup` directories, and copy the `setup/validators.txt` file there.
+
+```
+cp setup/validators.txt ~/.ziggurat/ripple/setup
+```
 4. In the same directory create a `config.toml` with the following contents:
     ```
     path = "<path to the directory where you built rippled>"
