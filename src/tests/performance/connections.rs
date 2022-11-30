@@ -56,7 +56,7 @@ const METRIC_REJECTED: &str = "perf_conn_rejected";
 const METRIC_ERROR: &str = "perf_conn_error";
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
-async fn p002_connections_load_() {
+async fn p002_connections_load() {
     // ZG-PERFORMANCE-002
     //
     // The node sheds or rejects connections when necessary.
@@ -65,15 +65,17 @@ async fn p002_connections_load_() {
     //  2. Initiate connections from `M > N` peer nodes
     //  3. Expect only `N` to be active at a time
     //
+    // Seems rippled not perform like the above way. max_peers is not a limit for connection
+    // number which is set (hardcoded?) to about 20 at the time. max_peer seems to make difference
+    // if any connections will be terminated. Need to investigate in the next commit.
 
     // maximum time allowed for a single iteration of the test
-    const MAX_ITER_TIME: Duration = Duration::from_secs(25);
+    const MAX_ITER_TIME: Duration = Duration::from_secs(20);
 
     /// maximum peers to configure node with
     const MAX_PEERS: u16 = 50;
 
-    //let synth_counts = vec![100u16, 1_000, 5_000, 10_000, 15_000, 20_000];
-    let synth_counts = vec![100u16];
+    let synth_counts = vec![1u16, 5u16, 10u16, 20u16, 30u16, 50u16];
 
     let mut all_stats = Vec::new();
 
@@ -104,7 +106,6 @@ async fn p002_connections_load_() {
 
         // start synthetic nodes
         for _ in 0..synth_count {
-
             let (exit_tx, exit_rx) = tokio::sync::oneshot::channel::<()>();
             synth_exits.push(exit_tx);
 
@@ -125,7 +126,7 @@ async fn p002_connections_load_() {
                 handshake_rx.recv().await.unwrap();
             }
         })
-            .await;
+        .await;
 
         // Send stop signal to peer nodes. We ignore the possible error
         // result as this will occur with peers that have already exited.
@@ -157,7 +158,7 @@ async fn p002_connections_load_() {
     node.stop().unwrap();
 
     // Display results table
-    println!("{}", fmt_table(Table::new(&all_stats)));
+    println!("\r\n {}", fmt_table(Table::new(&all_stats)));
 }
 
 async fn simulate_peer(node_addr: SocketAddr, handshake_complete: Sender<()>) {
@@ -181,10 +182,10 @@ async fn simulate_peer(node_addr: SocketAddr, handshake_complete: Sender<()>) {
     // Keep connection alive by consuming messages
     loop {
         match synth_node
-            .recv_message_timeout(Duration::from_millis(200))
+            .recv_message_timeout(Duration::from_millis(100))
             .await
         {
-            Ok((_, _message)) => continue,   // consume every message ignoring it
+            Ok((_, _message)) => continue, // consume every message ignoring it
             Err(_timeout) => {
                 // check for broken connection
                 if !synth_node.is_connected(node_addr) {
