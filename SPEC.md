@@ -352,3 +352,11 @@ The test index makes use of symbolic language in describing connection and messa
     These tests attempt handshakes with intentionally broken public_key and signature and assert whether
     rippled dropped connection after some short time.
 
+
+### ZG-RESISTANCE-004
+
+    The node rejects various random bytes pre-handshake.
+
+    -> random bytes
+    
+    Assert: The node is disconnected after sending random bytes
