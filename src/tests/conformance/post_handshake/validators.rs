@@ -1,10 +1,11 @@
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use bytes::{BufMut, BytesMut};
 use secp256k1::{constants::PUBLIC_KEY_SIZE, Message, Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha512};
 use tempfile::TempDir;
+use tokio::time::timeout;
 
 // serialization type field constants from rippled
 const ST_TAG_SEQUENCE: u8 = 0x24;
@@ -18,7 +19,7 @@ const ONE_YEAR: u32 = 86400 * 365;
 const JAN1_2000: u32 = 946684800;
 const RAND_SEQUENCE_NUMBER: u32 = 2022102584;
 const MANIFEST_PREFIX: &[u8] = b"MAN\x00";
-const TIMEOUT_MILLIS: u128 = 5000;
+const TIMEOUT_MILLIS: Duration = Duration::from_secs(7);
 
 // The master public key should be in the validators.txt file, in ~/.ziggurat/ripple/setup
 const MASTER_SECRET: &str = "8484781AE8EEB87D8A5AA38483B5CBBCCE6AD66B4185BB193DDDFAD5C1F4FC06";
@@ -61,7 +62,7 @@ async fn c015_TM_VALIDATOR_LIST_COLLECTION_node_should_send_validator_list() {
                 let decoded_blob =
                     base64::decode(&blob_info.blob).expect("unable to decode a blob");
                 let text = String::from_utf8(decoded_blob)
-                    .expect("unable to convert decoded blob bytes to a string");
+                    .expect("unable to convert decoded blob to a string");
                 let validator_list = serde_json::from_str::<ValidatorList>(&text)
                     .expect("unable to deserialize a validator list");
                 if validator_list.validators.is_empty() {
@@ -184,7 +185,7 @@ fn sign_buffer_with_prefix(hash_prefix: &[u8], secret_key: &SecretKey, buffer: &
 async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     // Create stateful node.
     let target = TempDir::new().expect("unable to create TempDir");
-    let node = Node::builder()
+    let mut node = Node::builder()
         .log_to_stdout(true)
         .start(target.path(), NodeType::Stateless)
         .await
@@ -259,20 +260,14 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         .unicast(node.addr(), payload)
         .expect("unable to send message");
 
-    let start = Instant::now();
     let check = |m: &BinaryMessage| {
-        let elapsed = start.elapsed();
-        let millis = elapsed.as_millis();
-        if millis > TIMEOUT_MILLIS {
-            panic!("We have timed out, failing to receive valid TmValidatorListCollection message");
-        }
         if let Payload::TmValidatorListCollection(validator_list_collection) = &m.payload {
             if let Some(blob_info) = validator_list_collection.blobs.first() {
                 let decoded_blob =
                     base64::decode(&blob_info.blob).expect("unable to decode a blob");
 
                 let text = String::from_utf8(decoded_blob)
-                    .expect("unable to convert decoded blob bytes to a string");
+                    .expect("unable to convert decoded blob to a string");
 
                 let validator_list = serde_json::from_str::<ValidatorList>(&text)
                     .expect("unable to deserialize a validator list");
@@ -289,5 +284,17 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         }
         false
     };
-    assert!(synth_node2.expect_message(&check).await);
+
+    timeout(TIMEOUT_MILLIS, async {
+        while !synth_node2.expect_message(&check).await {
+            continue;
+         }
+    })
+    .await
+    .expect("valid TmValidatorListCollection not received in time");
+
+    // Shutdown.
+    synth_node1.shut_down().await;
+    synth_node2.shut_down().await;
+    node.stop().expect("unable to stop the rippled node");
 }
