@@ -68,6 +68,25 @@ async fn p002_connections_load() {
     // Seems rippled not perform like the above way. max_peers is not a limit for connection
     // number which is set (hardcoded?) to about 20 at the time. max_peer seems to make difference
     // if any connections will be terminated. Need to investigate in the next commit.
+    //
+    // Sample result:
+    // ┌─────────────┬─────────┬──────────────┬──────────────┬──────────────┬──────────────┬──────────────┬────────────┐
+    // │             │         │  connection  │  connection  │  connection  │  connection  │  connection  │            │
+    // │  max peers  │  peers  │  accepted    │  rejected    │  terminated  │  error       │  timed out   │  time (s)  │
+    // ├─────────────┼─────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼────────────┤
+    // │          50 │       1 │            1 │            0 │            0 │            0 │            0 │       0.20 │
+    // ├─────────────┼─────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼────────────┤
+    // │          50 │       5 │            5 │            0 │            0 │            0 │            0 │       0.74 │
+    // ├─────────────┼─────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼────────────┤
+    // │          50 │      10 │           10 │            0 │            0 │            0 │            0 │       1.83 │
+    // ├─────────────┼─────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼────────────┤
+    // │          50 │      20 │           19 │            1 │            0 │            0 │            0 │       3.86 │
+    // ├─────────────┼─────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼────────────┤
+    // │          50 │      30 │           21 │            9 │           14 │            0 │            0 │       5.81 │
+    // ├─────────────┼─────────┼──────────────┼──────────────┼──────────────┼──────────────┼──────────────┼────────────┤
+    // │          50 │      50 │           20 │           30 │           19 │            0 │            0 │       9.53 │
+    // └─────────────┴─────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴────────────┘
+
 
     // maximum time allowed for a single iteration of the test
     const MAX_ITER_TIME: Duration = Duration::from_secs(20);
@@ -158,7 +177,7 @@ async fn p002_connections_load() {
     node.stop().unwrap();
 
     // Display results table
-    println!("\r\n {}", fmt_table(Table::new(&all_stats)));
+    println!("\r\n{}", fmt_table(Table::new(&all_stats)));
 }
 
 async fn simulate_peer(node_addr: SocketAddr, handshake_complete: Sender<()>) {

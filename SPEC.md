@@ -324,6 +324,13 @@ The test index makes use of symbolic language in describing connection and messa
     InvalidData errors to indicate that connection couldn't be established at all or timeout errors to indicate
     that data has not been received in timely manner.
 
+### ZG-PERFORMANCE-002
+
+    The node sheds or rejects connections when necessary.
+    1. Establish a node.
+    2. Connect and handshake synthetic peers until peer threshold is reached.
+    3. Expect connections to be dropped.
+
 ## Resistance
 
 ### ZG-RESISTANCE-001
