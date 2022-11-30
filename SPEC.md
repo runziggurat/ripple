@@ -306,8 +306,7 @@ The test index makes use of symbolic language in describing connection and messa
 
 ### ZG-CONFORMANCE-026
 
-    The test client should send a valid mtVALIDATORLIST message, with both master and signature public keys, correctly serializing a manifest and validator blob.
-    The create is done, but the result is not yet checked.  That will be done in a future task/PR.
+    The test client should send a valid mtVALIDATORLIST message, with both master and signature public keys, correctly serializing a manifest and validator blob.  A second node verifies the correctness by receiving the validator list in an mtVALIDATORLISTCOLLECTION message and verifying the contents.
 
     <>
     <- mtVALIDATORLIST sent with master and signing public keys and a correctly serialized manifest and validator blob.

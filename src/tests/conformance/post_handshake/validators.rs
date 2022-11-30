@@ -1,11 +1,10 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bytes::{BufMut, BytesMut};
 use secp256k1::{constants::PUBLIC_KEY_SIZE, Message, Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha512};
 use tempfile::TempDir;
-use tokio::time::sleep;
 
 // serialization type field constants from rippled
 const ST_TAG_SEQUENCE: u8 = 0x24;
@@ -17,8 +16,9 @@ const ST_TAG_MASTER_SIGNATURE: u8 = 0x12;
 
 const ONE_YEAR: u32 = 86400 * 365;
 const JAN1_2000: u32 = 946684800;
-const RAND_SEQUENCE_NUMBER: u32 = 2022100501;
+const RAND_SEQUENCE_NUMBER: u32 = 2022102584;
 const MANIFEST_PREFIX: &[u8] = b"MAN\x00";
+const TIMEOUT_MILLIS: u128 = 5000;
 
 // The master public key should be in the validators.txt file, in ~/.ziggurat/ripple/setup
 const MASTER_SECRET: &str = "8484781AE8EEB87D8A5AA38483B5CBBCCE6AD66B4185BB193DDDFAD5C1F4FC06";
@@ -33,13 +33,8 @@ use crate::{
     },
     setup::node::{Node, NodeType},
     tests::conformance::{perform_expected_message_test, PUBLIC_KEY_TYPES},
-    tools::{config::TestConfig, synth_node::SyntheticNode},
+    tools::synth_node::SyntheticNode,
 };
-
-#[derive(Deserialize, Serialize)]
-struct ValidatorList {
-    validators: Vec<Validator>,
-}
 
 #[derive(Deserialize, Serialize)]
 struct Validator {
@@ -48,7 +43,7 @@ struct Validator {
 }
 
 #[derive(Deserialize, Serialize)]
-struct ValidatorBlob {
+struct ValidatorList {
     sequence: u32,
     expiration: u32,
     validators: Vec<Validator>,
@@ -118,18 +113,18 @@ fn get_expiration() -> u32 {
     now + year - JAN1_2000
 }
 
-fn create_validator_blob_json(manifest: &[u8], public_key: &str) -> String {
+fn create_validator_list_json(manifest: &[u8], public_key: &str) -> String {
     let validator = Validator {
         validation_public_key: public_key.to_string(),
         manifest: base64::encode(manifest),
     };
 
-    let vblob = ValidatorBlob {
+    let validator_list = ValidatorList {
         sequence: RAND_SEQUENCE_NUMBER,
         expiration: get_expiration(),
         validators: vec![validator],
     };
-    serde_json::to_string(&vblob).unwrap()
+    serde_json::to_string(&validator_list).unwrap()
 }
 
 fn create_manifest(sequence: u32, public_key: &[u8], signing_pub_key: &[u8]) -> BytesMut {
@@ -189,17 +184,20 @@ fn sign_buffer_with_prefix(hash_prefix: &[u8], secret_key: &SecretKey, buffer: &
 async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     // Create stateful node.
     let target = TempDir::new().expect("unable to create TempDir");
-    let mut node = Node::builder()
+    let node = Node::builder()
         .log_to_stdout(true)
         .start(target.path(), NodeType::Stateless)
         .await
         .expect("unable to start stateful node");
 
-    let mut test_config = TestConfig::default();
-    test_config.synth_node_config.generate_new_keys = false;
-    let synth_node = SyntheticNode::new(&test_config).await;
-
-    synth_node
+    // create & connect two synth nodes
+    let synth_node1 = SyntheticNode::new(&Default::default()).await;
+    synth_node1
+        .connect(node.addr())
+        .await
+        .expect("unable to connect");
+    let mut synth_node2 = SyntheticNode::new(&Default::default()).await;
+    synth_node2
         .connect(node.addr())
         .await
         .expect("unable to connect");
@@ -241,7 +239,7 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     let signed_manifest = sign_manifest(manifest, &master_signature_bytes, &signature_bytes);
 
     // 6. Create Validator blob.
-    let blob = create_validator_blob_json(&signed_manifest, MASTER_PUBLIC);
+    let blob = create_validator_list_json(&signed_manifest, MASTER_PUBLIC);
 
     // 7.  Get signature for blob using master private key
     let signature = sign_buffer(&signing_secret_key, blob.as_bytes());
@@ -257,14 +255,39 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         signature,
         version: 1,
     });
-    synth_node
+    synth_node1
         .unicast(node.addr(), payload)
         .expect("unable to send message");
 
-    // TODO: confirm result from rippled that the message was valid
-    // will be done in new PR
+    let start = Instant::now();
+    let check = |m: &BinaryMessage| {
+        let elapsed = start.elapsed();
+        let millis = elapsed.as_millis();
+        if millis > TIMEOUT_MILLIS {
+            assert!(false);
+        }
+        if let Payload::TmValidatorListCollection(validator_list_collection) = &m.payload {
+            if let Some(blob_info) = validator_list_collection.blobs.first() {
+                let decoded_blob =
+                    base64::decode(&blob_info.blob).expect("unable to decode a blob");
 
-    sleep(Duration::from_secs(5)).await;
-    synth_node.shut_down().await;
-    node.stop().expect("unable to stop stateful node");
+                let text = String::from_utf8(decoded_blob)
+                    .expect("unable to convert decoded blob bytes to a string");
+
+                let validator_list = serde_json::from_str::<ValidatorList>(&text)
+                    .expect("unable to deserialize a validator list");
+
+                // Only our message has a single validator, so we skip the others
+                if validator_list.validators.len() == 1 {
+                    assert!(validator_list.sequence == RAND_SEQUENCE_NUMBER);
+                    assert!(validator_list.validators[0]
+                        .validation_public_key
+                        .eq(MASTER_PUBLIC));
+                    return true;
+                }
+            }
+        }
+        false
+    };
+    assert!(synth_node2.expect_message(&check).await);
 }
