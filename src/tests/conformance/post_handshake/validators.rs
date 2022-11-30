@@ -288,7 +288,7 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
     timeout(TIMEOUT_MILLIS, async {
         while !synth_node2.expect_message(&check).await {
             continue;
-         }
+        }
     })
     .await
     .expect("valid TmValidatorListCollection not received in time");
