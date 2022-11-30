@@ -264,7 +264,7 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         let elapsed = start.elapsed();
         let millis = elapsed.as_millis();
         if millis > TIMEOUT_MILLIS {
-            assert!(false);
+            panic!("We have timed out, failing to receive valid TmValidatorListCollection message");
         }
         if let Payload::TmValidatorListCollection(validator_list_collection) = &m.payload {
             if let Some(blob_info) = validator_list_collection.blobs.first() {
