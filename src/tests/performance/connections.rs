@@ -87,7 +87,6 @@ async fn p002_connections_load() {
     // │          50 │      50 │           20 │           30 │           19 │            0 │            0 │       9.53 │
     // └─────────────┴─────────┴──────────────┴──────────────┴──────────────┴──────────────┴──────────────┴────────────┘
 
-
     // maximum time allowed for a single iteration of the test
     const MAX_ITER_TIME: Duration = Duration::from_secs(20);
 
