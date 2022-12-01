@@ -93,11 +93,11 @@ async fn p002_connections_load() {
     /// maximum peers to configure node with
     const MAX_PEERS: u16 = 50;
 
-    let synth_counts = vec![1u16, 5u16, 10u16, 20u16, 30u16, 50u16];
+    let synth_counts = vec![1u16, 5, 10, 20, 30, 50];
 
     let mut all_stats = Vec::new();
 
-    let target = TempDir::new().expect("Unable to create TempDir");
+    let target = TempDir::new().expect("couldn't create a temporary directory");
     // start node
     let mut node = Node::builder()
         .max_peers(MAX_PEERS as usize)
@@ -187,9 +187,8 @@ async fn simulate_peer(node_addr: SocketAddr, handshake_complete: Sender<()>) {
     let handshake_result = synth_node.connect(node_addr).await;
     handshake_complete.send(()).await.unwrap();
     match handshake_result {
-        Ok(stream) => {
+        Ok(_) => {
             metrics::counter!(METRIC_ACCEPTED, 1);
-            stream
         }
         Err(_err) => {
             metrics::counter!(METRIC_REJECTED, 1);
