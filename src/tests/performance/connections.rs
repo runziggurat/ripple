@@ -173,7 +173,9 @@ async fn p002_connections_load() {
         all_stats.push(stats);
     }
 
-    node.stop().unwrap();
+    // TODO: assertions with expected test results.
+
+    node.stop().expect("failed to stop node");
 
     // Display results table
     println!("\r\n{}", fmt_table(Table::new(&all_stats)));
@@ -202,7 +204,7 @@ async fn simulate_peer(node_addr: SocketAddr, handshake_complete: Sender<()>) {
             .recv_message_timeout(Duration::from_millis(100))
             .await
         {
-            Ok((_, _message)) => continue, // consume every message ignoring it
+            Ok(_) => continue, // consume every message ignoring it
             Err(_timeout) => {
                 // check for broken connection
                 if !synth_node.is_connected(node_addr) {
