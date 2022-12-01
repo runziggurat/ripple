@@ -313,7 +313,6 @@ The test index makes use of symbolic language in describing connection and messa
 
     Assert: sequence number in the validator list and public key in the validator match what was sent.
 
-
 ## Performance
 
 ### ZG-PERFORMANCE-001

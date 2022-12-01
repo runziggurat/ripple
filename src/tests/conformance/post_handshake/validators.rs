@@ -19,7 +19,7 @@ const ONE_YEAR: u32 = 86400 * 365;
 const JAN1_2000: u32 = 946684800;
 const RAND_SEQUENCE_NUMBER: u32 = 2022102584;
 const MANIFEST_PREFIX: &[u8] = b"MAN\x00";
-const TIMEOUT_MILLIS: Duration = Duration::from_secs(7);
+const WAIT_MSG_TIMEOUT: Duration = Duration::from_secs(5);
 
 // The master public key should be in the validators.txt file, in ~/.ziggurat/ripple/setup
 const MASTER_SECRET: &str = "8484781AE8EEB87D8A5AA38483B5CBBCCE6AD66B4185BB193DDDFAD5C1F4FC06";
@@ -274,10 +274,11 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
 
                 // Only our message has a single validator, so we skip the others
                 if validator_list.validators.len() == 1 {
-                    assert!(validator_list.sequence == RAND_SEQUENCE_NUMBER);
-                    assert!(validator_list.validators[0]
-                        .validation_public_key
-                        .eq(MASTER_PUBLIC));
+                    assert_eq!(validator_list.sequence, RAND_SEQUENCE_NUMBER);
+                    assert_eq!(
+                        validator_list.validators[0].validation_public_key,
+                        MASTER_PUBLIC
+                    );
                     return true;
                 }
             }
@@ -285,7 +286,7 @@ async fn c026_TM_VALIDATOR_LIST_send_validator_list() {
         false
     };
 
-    timeout(TIMEOUT_MILLIS, async {
+    timeout(WAIT_MSG_TIMEOUT, async {
         while !synth_node2.expect_message(&check).await {
             continue;
         }
