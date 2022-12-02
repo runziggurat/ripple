@@ -175,7 +175,7 @@ async fn p002_connections_load() {
 
     // TODO: assertions with expected test results.
 
-    node.stop().expect("failed to stop node");
+    node.stop().expect("unable to stop the node");
 
     // Display results table
     println!("\r\n{}", fmt_table(Table::new(&all_stats)));
