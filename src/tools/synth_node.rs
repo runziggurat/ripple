@@ -58,6 +58,17 @@ impl SyntheticNode {
         self.inner.connect(target).await
     }
 
+    /// Connects to the target address.
+    pub async fn connect_with_outgoing_addr(
+        &self,
+        outgoing_addr: SocketAddr,
+        target: SocketAddr,
+    ) -> io::Result<()> {
+        self.inner
+            .connect_with_outgoing_addr(outgoing_addr, target)
+            .await
+    }
+
     pub fn unicast(
         &self,
         addr: SocketAddr,

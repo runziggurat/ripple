@@ -140,22 +140,32 @@ async fn p001_t1_PING_PONG_throughput() {
 }
 
 async fn simulate_peer(node_addr: SocketAddr, thread_num: usize) {
-    let mut config = TestConfig::default();
+    let config = TestConfig::default();
 
     // If there is address for our thread in the pool we can use it.
-    // Otherwise we'll not set bound_addr and use local IP addr (127.0.0.1).
-    if IPS.len() > thread_num {
+    // Otherwise we'll not set bound address and use local IP addr (127.0.0.1).
+    let bound_addr = if IPS.len() > thread_num {
         // We can safely use the same port as every thread will use different IP.
-        let source_addr = SocketAddr::new(
+        Some(SocketAddr::new(
             IpAddr::V4(Ipv4Addr::from_str(IPS[thread_num]).unwrap()),
             CONNECTION_PORT,
-        );
-        config.pea2pea_config.bound_addr = Some(source_addr);
-    }
+        ))
+    } else {
+        None
+    };
 
     let mut synth_node = SyntheticNode::new(&config).await;
 
-    synth_node.connect(node_addr).await.unwrap();
+    match bound_addr {
+        None => synth_node.connect(node_addr).await,
+        Some(bound_addr) => {
+            synth_node
+                .connect_with_outgoing_addr(bound_addr, node_addr)
+                .await
+        }
+    }
+    .unwrap();
+
     let mut seq;
 
     for _ in 0..PINGS {
