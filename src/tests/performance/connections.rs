@@ -6,7 +6,7 @@ use std::{
 
 use tabled::{Table, Tabled};
 use tempfile::TempDir;
-use tokio::{net::TcpSocket, sync::mpsc::Sender};
+use tokio::{net::TcpSocket, sync::mpsc::Sender, task::JoinSet};
 
 use crate::{
     setup::node::{Node, NodeType},
@@ -51,8 +51,6 @@ impl Stats {
         }
     }
 }
-
-const CONNECTION_PORT: u16 = 31337;
 
 const METRIC_ACCEPTED: &str = "perf_conn_accepted";
 const METRIC_TERMINATED: &str = "perf_conn_terminated";
@@ -175,22 +173,16 @@ async fn p002_connections_load() {
         let mut ips = IPS.to_vec();
 
         for _ in 0..synth_count {
+            // If there is address for our thread in the pool we can use it.
+            // Otherwise we'll not set bound_addr and use local IP addr (127.0.0.1).
+            let ip = ips.pop().unwrap_or("127.0.0.1");
+
+            let ip = SocketAddr::new(IpAddr::V4(Ipv4Addr::from_str(ip).unwrap()), 0);
             let socket = TcpSocket::new_v4().unwrap();
 
             // Make sure we can reuse the address and port
             socket.set_reuseaddr(true).unwrap();
             socket.set_reuseport(true).unwrap();
-
-            // If there is address for our thread in the pool we can use it.
-            // Otherwise we'll not set bound_addr and use local IP addr (127.0.0.1).
-            let ip = if let Some(ip_addr) = ips.pop() {
-                SocketAddr::new(
-                    IpAddr::V4(Ipv4Addr::from_str(ip_addr).unwrap()),
-                    CONNECTION_PORT,
-                )
-            } else {
-                "127.0.0.1:0".parse().unwrap()
-            };
 
             socket.bind(ip).expect("unable to bind to socket");
             synth_sockets.push(socket);
@@ -204,7 +196,7 @@ async fn p002_connections_load() {
         metrics::register_counter!(METRIC_REJECTED);
         metrics::register_counter!(METRIC_ERROR);
 
-        let mut synth_handles = Vec::with_capacity(synth_count);
+        let mut synth_handles = JoinSet::new();
         let mut synth_exits = Vec::with_capacity(synth_count);
         let (handshake_tx, mut handshake_rx) = tokio::sync::mpsc::channel::<()>(synth_count);
 
@@ -217,12 +209,12 @@ async fn p002_connections_load() {
 
             let synth_handshaken = handshake_tx.clone();
             // Synthetic node runs until it completes or is instructed to exit
-            synth_handles.push(tokio::spawn(async move {
+            synth_handles.spawn(async move {
                 tokio::select! {
                     _ = exit_rx => {},
                     _ = simulate_peer(node_addr, synth_handshaken, socket) => {},
                 };
-            }));
+            });
         }
 
         // Wait for all peers to indicate that they've completed the handshake portion
@@ -241,9 +233,7 @@ async fn p002_connections_load() {
         }
 
         // Wait for peers to complete
-        for handle in synth_handles {
-            handle.await.unwrap();
-        }
+        while (synth_handles.join_next().await).is_some() {}
 
         // Collect stats for this run
         let mut stats = Stats::new(MAX_PEERS, synth_count as u16);
