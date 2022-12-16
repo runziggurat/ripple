@@ -156,7 +156,11 @@ async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket) {
     let mut synth_node = SyntheticNode::new(&config).await;
 
     // Establish peer connection
-    synth_node.connect_from(node_addr, socket).await.expect("unable to connect to node");
+    synth_node
+        .connect_from(node_addr, socket)
+        .await
+        .expect("unable to connect to node");
+
     let mut seq;
 
     for _ in 0..PINGS {
@@ -188,18 +192,19 @@ async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket) {
             loop {
                 let m = synth_node.recv_message().await;
                 if matches!(
-                        &m.1.payload,
-                        Payload::TmPing(TmPing {
-                        r#type: r_type,
-                        seq: Some(s),
-                        ..
-                        }) if *s == seq && *r_type == PingType::PtPong as i32
-                    ) {
+                    &m.1.payload,
+                    Payload::TmPing(TmPing {
+                    r#type: r_type,
+                    seq: Some(s),
+                    ..
+                    }) if *s == seq && *r_type == PingType::PtPong as i32
+                ) {
                     metrics::histogram!(METRIC_LATENCY, duration_as_ms(now.elapsed()));
                     break;
                 }
             }
-        }).await;
+        })
+        .await;
     }
 
     synth_node.shut_down().await

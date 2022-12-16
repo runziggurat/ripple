@@ -206,15 +206,16 @@ async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket, tx_hash: [u8; T
             loop {
                 let m = synth_node.recv_message().await;
                 if matches!(
-                        &m.1.payload,
-                        Payload::TmTransactions(TmTransactions {transactions})
-                        if transactions.len() == 1
-                    ) {
+                    &m.1.payload,
+                    Payload::TmTransactions(TmTransactions {transactions})
+                    if transactions.len() == 1
+                ) {
                     metrics::histogram!(METRIC_LATENCY, duration_as_ms(now.elapsed()));
                     break;
                 }
             }
-        }).await;
+        })
+        .await;
     }
 
     synth_node.shut_down().await
