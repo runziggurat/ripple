@@ -1,5 +1,4 @@
 use std::{
-    io::ErrorKind,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     str::FromStr,
     time::{Duration, Instant},
@@ -7,7 +6,7 @@ use std::{
 
 use rand::{thread_rng, RngCore};
 use tempfile::TempDir;
-use tokio::net::TcpSocket;
+use tokio::{net::TcpSocket, task::JoinSet, time::timeout};
 
 use crate::{
     protocol::{
@@ -29,7 +28,7 @@ use crate::{
 const MAX_PEERS: usize = 100;
 const PINGS: u16 = 1000;
 const METRIC_LATENCY: &str = "ping_perf_latency";
-const CONNECTION_PORT: u16 = 31337;
+const RESPONSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 #[allow(non_snake_case)]
@@ -58,47 +57,30 @@ async fn p001_t1_PING_PONG_throughput() {
     //          connections cannot be established and other ones are closed during the test. However, amount of nodes and ping count
     //          does not affect the latency and rippled responses have similar std time.
     //
-    // Example test result (with percentile latencies) - 1000 pings per node with max_peers set to 100 - node was restarted each interation:
+    // Example test result (with percentile latencies) - 1000 pings per node with max_peers set to 100:
     // ┌─────────┬────────────┬────────────┬────────────┬────────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────────┬────────────┬──────────────┐
     // │  peers  │  requests  │  min (ms)  │  max (ms)  │  std dev (ms)  │  10% (ms)  │  50% (ms)  │  75% (ms)  │  90% (ms)  │  99% (ms)  │  completion %  │  time (s)  │  requests/s  │
     // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │       1 │       1000 │          0 │         49 │              3 │          0 │          0 │          0 │          0 │          0 │         100.00 │       0.59 │      1698.56 │
+    // │       1 │       1000 │          0 │         42 │              2 │          0 │          0 │          0 │          0 │          0 │         100.00 │       0.29 │      3412.58 │
     // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      10 │       1000 │          0 │         58 │              2 │          0 │          0 │          0 │          0 │          0 │         100.00 │       2.02 │      4961.28 │
+    // │      10 │       1000 │          0 │         55 │              3 │          0 │          0 │          0 │          0 │          0 │         100.00 │       2.89 │      3455.60 │
     // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      15 │       1000 │          0 │         59 │              6 │          0 │          0 │          0 │          0 │         43 │         100.00 │       2.82 │      5328.07 │
+    // │      15 │       1000 │          0 │         58 │              4 │          0 │          0 │          0 │          0 │          0 │         100.00 │       4.33 │      3465.85 │
     // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      20 │       1000 │          0 │         60 │              4 │          0 │          0 │          0 │          0 │          0 │         100.00 │       4.22 │      4743.56 │
+    // │      20 │       1000 │          0 │         81 │              6 │          0 │          0 │          0 │          0 │         43 │         100.00 │       5.43 │      3685.35 │
     // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      30 │       1000 │          0 │         59 │              7 │          0 │          0 │          0 │          0 │         49 │         100.00 │       6.94 │      4319.85 │
+    // │      30 │       1000 │          0 │        155 │              6 │          0 │          0 │          0 │          0 │         42 │         100.00 │       8.29 │      3616.67 │
     // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      50 │       1000 │          0 │        369 │              8 │          0 │          0 │          0 │          0 │         47 │         100.00 │      11.20 │      4463.01 │
+    // │      50 │       1000 │          0 │         60 │              5 │          0 │          0 │          1 │          1 │         20 │         100.00 │      12.71 │      3933.25 │
     // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │     100 │       1000 │          0 │       3130 │             48 │          0 │          0 │          0 │          1 │         44 │          71.01 │     137.67 │       515.81 │
-    // └─────────┴────────────┴────────────┴────────────┴────────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────────┴────────────┴──────────────┘
-    //
-    // Example test result (with percentile latencies) - 1000 pings per node with max_peers set to 100 - node was NOT restarted each interation:
-    // ┌─────────┬────────────┬────────────┬────────────┬────────────────┬────────────┬────────────┬────────────┬────────────┬────────────┬────────────────┬────────────┬──────────────┐
-    // │  peers  │  requests  │  min (ms)  │  max (ms)  │  std dev (ms)  │  10% (ms)  │  50% (ms)  │  75% (ms)  │  90% (ms)  │  99% (ms)  │  completion %  │  time (s)  │  requests/s  │
+    // │     100 │       1000 │          0 │        175 │             11 │          0 │          1 │          1 │          2 │         50 │          85.00 │      31.81 │      2672.18 │
     // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │       1 │       1000 │          0 │         47 │              2 │          0 │          0 │          0 │          0 │          0 │         100.00 │       0.33 │      3009.46 │
-    // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      10 │       1000 │          0 │         57 │              5 │          0 │          0 │          0 │          0 │          0 │          99.52 │      12.14 │       820.00 │
-    // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      15 │       1000 │          0 │         59 │              3 │          0 │          0 │          0 │          0 │          0 │          97.33 │      12.00 │      1216.49 │
-    // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      20 │       1000 │          0 │         84 │              4 │          0 │          0 │          0 │          0 │          0 │          87.69 │      13.55 │      1293.90 │
-    // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      30 │       1000 │          0 │         67 │              4 │          0 │          0 │          0 │          0 │          0 │          86.68 │      14.89 │      1746.04 │
-    // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │      50 │       1000 │          0 │        302 │              5 │          0 │          0 │          0 │          0 │          1 │          95.32 │      19.10 │      2495.61 │
-    // ├─────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼────────────┼────────────┼────────────┼────────────┼────────────────┼────────────┼──────────────┤
-    // │     100 │       1000 │          0 │        177 │              8 │          0 │          0 │          0 │          1 │         48 │          66.00 │     143.66 │       459.43 │
+    // │     150 │       1000 │          0 │        483 │             13 │          0 │          1 │          1 │          2 │         51 │          56.66 │      42.20 │      2014.08 │
     // └─────────┴────────────┴────────────┴────────────┴────────────────┴────────────┴────────────┴────────────┴────────────┴────────────┴────────────────┴────────────┴──────────────┘
     // *NOTE* run with `cargo test --release tests::performance::ping_pong -- --nocapture`
     // Before running test generate dummy devices with different ips using toos/ips.py
 
-    let synth_counts = vec![1, 10, 15, 20, 30, 50, 100];
+    let synth_counts = vec![1, 10, 15, 20, 30, 50, 100, 150];
 
     let mut table = RequestsTable::default();
 
@@ -115,22 +97,16 @@ async fn p001_t1_PING_PONG_throughput() {
         let mut ips = IPS.to_vec();
 
         for _ in 0..synth_count {
+            // If there is address for our thread in the pool we can use it.
+            // Otherwise we'll not set bound_addr and use local IP addr (127.0.0.1).
+            let ip = ips.pop().unwrap_or("127.0.0.1");
+
+            let ip = SocketAddr::new(IpAddr::V4(Ipv4Addr::from_str(ip).unwrap()), 0);
             let socket = TcpSocket::new_v4().unwrap();
 
             // Make sure we can reuse the address and port
             socket.set_reuseaddr(true).unwrap();
             socket.set_reuseport(true).unwrap();
-
-            // If there is address for our thread in the pool we can use it.
-            // Otherwise we'll not set bound_addr and use local IP addr (127.0.0.1).
-            let ip = if let Some(ip_addr) = ips.pop() {
-                SocketAddr::new(
-                    IpAddr::V4(Ipv4Addr::from_str(ip_addr).unwrap()),
-                    CONNECTION_PORT,
-                )
-            } else {
-                "127.0.0.1:0".parse().unwrap()
-            };
 
             socket.bind(ip).expect("unable to bind to socket");
             synth_sockets.push(socket);
@@ -141,17 +117,15 @@ async fn p001_t1_PING_PONG_throughput() {
         // clear metrics and register metrics
         metrics::register_histogram!(METRIC_LATENCY);
 
-        let mut synth_handles = Vec::with_capacity(synth_count);
+        let mut synth_handles = JoinSet::new();
         let test_start = tokio::time::Instant::now();
 
         for socket in synth_sockets {
-            synth_handles.push(tokio::spawn(simulate_peer(node_addr, socket)));
+            synth_handles.spawn(simulate_peer(node_addr, socket));
         }
 
         // wait for peers to complete
-        for handle in synth_handles {
-            let _ = handle.await;
-        }
+        while (synth_handles.join_next().await).is_some() {}
 
         let time_taken_secs = test_start.elapsed().as_secs_f64();
 
@@ -175,13 +149,14 @@ async fn p001_t1_PING_PONG_throughput() {
     println!("\r\n{}", table);
 }
 
+#[allow(unused_must_use)] // just for result of the timeout
 async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket) {
     let config = TestConfig::default();
 
     let mut synth_node = SyntheticNode::new(&config).await;
 
     // Establish peer connection
-    synth_node.connect_from(node_addr, socket).await.unwrap();
+    synth_node.connect_from(node_addr, socket).await.expect("unable to connect to node");
     let mut seq;
 
     for _ in 0..PINGS {
@@ -196,19 +171,23 @@ async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket) {
         });
 
         // Send Ping
-        synth_node.unicast(node_addr, payload).unwrap();
+        if !synth_node.is_connected(node_addr) {
+            break;
+        }
+
+        synth_node
+            .unicast(node_addr, payload)
+            .expect("unable to send message");
 
         let now = Instant::now();
-        let mut matched = false;
 
-        // There is a need to read messages in a loop as we can read message that is not ping reply.
-        while !matched {
-            match synth_node
-                .recv_message_timeout(Duration::from_secs(10))
-                .await
-            {
-                Ok(m) => {
-                    if matches!(
+        // We can safely drop the result here because we don't care about it - if the message is
+        // received and it's our response we simply register it for histogram and break the loop.
+        // In every other case we simply move out and go to another request iteration.
+        timeout(RESPONSE_TIMEOUT, async {
+            loop {
+                let m = synth_node.recv_message().await;
+                if matches!(
                         &m.1.payload,
                         Payload::TmPing(TmPing {
                         r#type: r_type,
@@ -216,20 +195,11 @@ async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket) {
                         ..
                         }) if *s == seq && *r_type == PingType::PtPong as i32
                     ) {
-                        metrics::histogram!(METRIC_LATENCY, duration_as_ms(now.elapsed()));
-                        matched = true;
-                    }
+                    metrics::histogram!(METRIC_LATENCY, duration_as_ms(now.elapsed()));
+                    break;
                 }
-                Err(e) => match e.kind() {
-                    ErrorKind::TimedOut => {
-                        break;
-                    }
-                    _ => {
-                        panic!("Unexpected error: {:?}", e);
-                    }
-                },
             }
-        }
+        }).await;
     }
 
     synth_node.shut_down().await
