@@ -106,7 +106,7 @@ impl NodeBuilder {
                 let mut copy_options = dir::CopyOptions::new();
                 copy_options.content_only = true;
                 copy_options.overwrite = true;
-                dir::copy(&source, target, &copy_options)?;
+                dir::copy(source, target, &copy_options)?;
 
                 self.conf.local_addr =
                     SocketAddr::new(VALIDATOR_IPS[node_idx].parse().unwrap(), DEFAULT_PORT);
@@ -123,7 +123,7 @@ impl NodeBuilder {
                 let validators_file_dst = target.join(VALIDATORS_FILE_NAME);
 
                 let copy_options = file::CopyOptions::new();
-                file::copy(&validators_file_src, &validators_file_dst, &copy_options)?;
+                file::copy(validators_file_src, validators_file_dst, &copy_options)?;
 
                 self.conf.network_id = None;
                 self.conf.validator_token = None;

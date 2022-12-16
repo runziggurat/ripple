@@ -170,7 +170,7 @@ impl Decoder for MessageCodec {
                 }
 
                 let uncompressed_size = payload_wire_size;
-                let total_wire_size = header_size + payload_wire_size as u32;
+                let total_wire_size = header_size + payload_wire_size;
 
                 let mut message_type = 0;
                 for _ in 0..2 {
