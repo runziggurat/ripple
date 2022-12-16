@@ -142,7 +142,7 @@ async fn p001_t1_PING_PONG_throughput() {
             }
         }
 
-        node.stop().unwrap();
+        node.stop().expect("unable to stop the node");
     }
 
     // Display results table
