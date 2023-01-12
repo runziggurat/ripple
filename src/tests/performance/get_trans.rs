@@ -6,6 +6,15 @@ use std::{
 
 use tempfile::TempDir;
 use tokio::{net::TcpSocket, task::JoinSet, time::timeout};
+use ziggurat_core_metrics::{
+    latency_tables::{LatencyRequestStats, LatencyRequestsTable},
+    recorder::TestMetrics,
+    tables::duration_as_ms,
+};
+use ziggurat_core_utils::err_constants::{
+    ERR_NODE_BUILD, ERR_NODE_STOP, ERR_SOCKET_BIND, ERR_SYNTH_CONNECT, ERR_SYNTH_UNICAST,
+    ERR_TEMPDIR_NEW,
+};
 
 use crate::{
     protocol::{
@@ -18,10 +27,6 @@ use crate::{
     tools::{
         constants::{EXPECTED_RESULT_TIMEOUT, TEST_ACCOUNT},
         ips::IPS,
-        metrics::{
-            recorder::TestMetrics,
-            tables::{duration_as_ms, RequestStats, RequestsTable},
-        },
         rpc::{get_transaction_info, wait_for_account_data, wait_for_state},
         synth_node::SyntheticNode,
     },
@@ -37,6 +42,10 @@ const REQUESTS: u16 = 150;
 const RESPONSE_TIMEOUT: Duration = Duration::from_secs(7);
 const TX_HASH_LEN: usize = 32;
 
+#[cfg_attr(
+    not(feature = "performance"),
+    ignore = "run this test with the 'performance' feature enabled"
+)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 #[allow(non_snake_case)]
 async fn p003_t1_GET_TRANSACTION_latency() {
@@ -78,15 +87,15 @@ async fn p003_t1_GET_TRANSACTION_latency() {
 
     let synth_counts = vec![1, 10, 20, 50, 75, 100, 125, 150, 200];
 
-    let mut table = RequestsTable::default();
+    let mut table = LatencyRequestsTable::default();
 
     for synth_count in synth_counts {
-        let target = TempDir::new().expect("Unable to create TempDir");
+        let target = TempDir::new().expect(ERR_TEMPDIR_NEW);
         let mut node = Node::builder()
             .max_peers(MAX_PEERS)
             .start(target.path(), NodeType::Stateful)
             .await
-            .unwrap();
+            .expect(ERR_NODE_BUILD);
         let node_addr = node.addr();
 
         let mut synth_sockets = Vec::with_capacity(synth_count);
@@ -104,7 +113,7 @@ async fn p003_t1_GET_TRANSACTION_latency() {
             socket.set_reuseaddr(true).unwrap();
             socket.set_reuseport(true).unwrap();
 
-            socket.bind(ip).expect("unable to bind to socket");
+            socket.bind(ip).expect(ERR_SOCKET_BIND);
             synth_sockets.push(socket);
         }
 
@@ -146,7 +155,7 @@ async fn p003_t1_GET_TRANSACTION_latency() {
         if let Some(latencies) = snapshot.construct_histogram(METRIC_LATENCY) {
             if latencies.entries() >= 1 {
                 // add stats to table display
-                table.add_row(RequestStats::new(
+                table.add_row(LatencyRequestStats::new(
                     synth_count as u16,
                     REQUESTS,
                     latencies,
@@ -155,7 +164,7 @@ async fn p003_t1_GET_TRANSACTION_latency() {
             }
         }
 
-        node.stop().expect("unable to stop the node");
+        node.stop().expect(ERR_NODE_STOP);
     }
 
     // Display results table
@@ -170,7 +179,7 @@ async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket, tx_hash: [u8; T
     synth_node
         .connect_from(node_addr, socket)
         .await
-        .expect("unable to connect to node");
+        .expect(ERR_SYNTH_CONNECT);
 
     for seq in 0..REQUESTS {
         let payload = Payload::TmGetObjectByHash(TmGetObjectByHash {
@@ -195,7 +204,7 @@ async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket, tx_hash: [u8; T
 
         synth_node
             .unicast(node_addr, payload)
-            .expect("unable to send message");
+            .expect(ERR_SYNTH_UNICAST);
 
         let now = Instant::now();
 

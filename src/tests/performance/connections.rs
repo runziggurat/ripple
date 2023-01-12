@@ -4,59 +4,30 @@ use std::{
     time::{Duration, Instant},
 };
 
-use tabled::{Table, Tabled};
+use tabled::Table;
 use tempfile::TempDir;
 use tokio::{net::TcpSocket, sync::mpsc::Sender, task::JoinSet};
+use ziggurat_core_metrics::{
+    connection_tables::ConnectionStats, recorder::TestMetrics, tables::fmt_table,
+};
+use ziggurat_core_utils::err_constants::{
+    ERR_NODE_BUILD, ERR_NODE_STOP, ERR_SOCKET_BIND, ERR_TEMPDIR_NEW,
+};
 
 use crate::{
     setup::node::{Node, NodeType},
-    tools::{
-        config::TestConfig,
-        ips::IPS,
-        metrics::{
-            recorder::TestMetrics,
-            tables::{fmt_table, table_float_display},
-        },
-        synth_node::SyntheticNode,
-    },
+    tools::{config::TestConfig, ips::IPS, synth_node::SyntheticNode},
 };
-
-#[derive(Tabled, Default, Debug, Clone)]
-struct Stats {
-    #[tabled(rename = "\n max peers ")]
-    pub max_peers: u16,
-    #[tabled(rename = "\n peers ")]
-    pub peers: u16,
-    #[tabled(rename = " connection \n accepted ")]
-    pub accepted: u16,
-    #[tabled(rename = " connection \n rejected ")]
-    pub rejected: u16,
-    #[tabled(rename = " connection \n terminated ")]
-    pub terminated: u16,
-    #[tabled(rename = " connection \n error ")]
-    pub conn_error: u16,
-    #[tabled(rename = " connection \n timed out ")]
-    pub timed_out: u16,
-    #[tabled(rename = "\n time (s) ")]
-    #[tabled(display_with = "table_float_display")]
-    pub time: f64,
-}
-
-impl Stats {
-    fn new(max_peers: u16, peers: u16) -> Self {
-        Self {
-            max_peers,
-            peers,
-            ..Default::default()
-        }
-    }
-}
 
 const METRIC_ACCEPTED: &str = "perf_conn_accepted";
 const METRIC_TERMINATED: &str = "perf_conn_terminated";
 const METRIC_REJECTED: &str = "perf_conn_rejected";
 const METRIC_ERROR: &str = "perf_conn_error";
 
+#[cfg_attr(
+    not(feature = "performance"),
+    ignore = "run this test with the 'performance' feature enabled"
+)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn p002_connections_load() {
     // ZG-PERFORMANCE-002
@@ -160,13 +131,13 @@ async fn p002_connections_load() {
     let mut all_stats = Vec::new();
 
     for synth_count in synth_counts {
-        let target = TempDir::new().expect("couldn't create a temporary directory");
+        let target = TempDir::new().expect(ERR_TEMPDIR_NEW);
         // start node
         let mut node = Node::builder()
             .max_peers(MAX_PEERS as usize)
             .start(target.path(), NodeType::Stateless)
             .await
-            .unwrap();
+            .expect(ERR_NODE_BUILD);
         let node_addr = node.addr();
 
         let mut synth_sockets = Vec::with_capacity(synth_count);
@@ -184,7 +155,7 @@ async fn p002_connections_load() {
             socket.set_reuseaddr(true).unwrap();
             socket.set_reuseport(true).unwrap();
 
-            socket.bind(ip).expect("unable to bind to socket");
+            socket.bind(ip).expect(ERR_SOCKET_BIND);
             synth_sockets.push(socket);
         }
 
@@ -236,7 +207,7 @@ async fn p002_connections_load() {
         while (synth_handles.join_next().await).is_some() {}
 
         // Collect stats for this run
-        let mut stats = Stats::new(MAX_PEERS, synth_count as u16);
+        let mut stats = ConnectionStats::new(MAX_PEERS, synth_count as u16);
         stats.time = test_start.elapsed().as_secs_f64();
         {
             let snapshot = test_metrics.take_snapshot();
@@ -251,7 +222,7 @@ async fn p002_connections_load() {
         }
         all_stats.push(stats);
 
-        node.stop().expect("unable to stop the node");
+        node.stop().expect(ERR_NODE_STOP);
     }
 
     // Display results table

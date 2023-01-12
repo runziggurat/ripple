@@ -27,6 +27,8 @@ tabled = "0.10"
 tempfile = "3.3"
 tokio-openssl = "0.6"
 toml = "0.5.9"
+ziggurat-core-metrics = { git = "https://github.com/runziggurat/ziggurat-core", tag = "v0.1.2-zgm" }
+ziggurat-core-utils = { git = "https://github.com/runziggurat/ziggurat-core", tag = "v0.1.0" }
 
 [dependencies.bs58]
 version = "0.4.0"
@@ -92,6 +94,7 @@ optional = true
 
 [features]
 crawler = [ "clap", "thiserror", "jsonrpsee", "spectre"]
+performance = []
 
 [[bin]]
 name = "crawler"

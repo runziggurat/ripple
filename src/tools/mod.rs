@@ -4,7 +4,6 @@ pub mod config;
 pub mod constants;
 pub mod inner_node;
 pub mod ips;
-pub mod metrics;
 pub mod rpc;
 pub mod synth_node;
 pub mod tls_cert;
