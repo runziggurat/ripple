@@ -38,9 +38,9 @@ pub(super) async fn new_network_summary(
     let good_nodes = get_good_nodes(&nodes);
     let server_versions = get_server_versions(&nodes);
 
-    let agraph = metrics
+    let indices = metrics
         .graph
-        .create_agraph(&good_nodes.keys().copied().collect());
+        .get_filtered_adjacency_indices(&good_nodes.keys().copied().collect());
 
     NetworkSummary {
         num_known_nodes: nodes.len(),
@@ -49,7 +49,7 @@ pub(super) async fn new_network_summary(
         node_ips: good_nodes.iter().map(|n| n.0.to_string()).collect(),
         user_agents: server_versions,
         crawler_runtime,
-        agraph,
+        indices,
         ..Default::default()
     }
 }

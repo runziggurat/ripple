@@ -91,12 +91,13 @@ default-features = false
 features = ["ansi", "env-filter", "fmt", "parking_lot", "smallvec"]
 
 [dependencies.spectre]
-version = "0.5.1"
+git = "https://github.com/niklaslong/spectre"
+rev = "f1d6698"
 optional = true
 
 [dependencies.ziggurat-core-crawler]
 git = "https://github.com/runziggurat/ziggurat-core"
-rev = "2de7a9d"
+rev = "001c943"
 optional = true
 
 [features]
