@@ -46,9 +46,11 @@ fn create_rpc_module(rpc_context: RpcContext) -> RpcModule<RpcContext> {
             let report_params = params.parse::<ReportParams>()?;
             if let Some(path) = report_params.file {
                 let content = serde_json::to_string(rpc_context.0.lock().unwrap().deref())?;
-                let length = content.len() as i32;
+                // Wrap our NetworkSummary in a JSON-RPC response envelope
+                let response = "{\"jsonrpc\":\"2.0\",\"result\":".to_owned() + &content + ",\"id\":0}";
+                let length = response.len() as i32;
                 // TODO: consider some checks against directory traversal
-                if let Err(e) = fs::write(path, content) {
+                if let Err(e) = fs::write(path, response) {
                     warn!("Unable to write to file: {}", e);
                 }
                 Ok(length)
