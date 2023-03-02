@@ -10,7 +10,7 @@ use jsonrpsee::{
     server::{ServerBuilder, ServerHandle},
     RpcModule,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use tracing::{debug, warn};
 use ziggurat_core_crawler::summary::NetworkSummary;
 
@@ -36,22 +36,23 @@ pub async fn initialize_rpc_server(rpc_addr: SocketAddr, rpc_context: RpcContext
 
 fn create_rpc_module(rpc_context: RpcContext) -> RpcModule<RpcContext> {
     let mut module = RpcModule::new(rpc_context);
-    module
-        .register_method("getmetrics", |params, rpc_context| {
+    module.register_method("getmetrics", |_params, rpc_context| {
+            Ok(rpc_context.0.lock().unwrap().clone())
+        }).unwrap();
+    module.register_method("dumpmetrics", |params, rpc_context| {
             let report_params = params.parse::<ReportParams>()?;
             if let Some(path) = report_params.file {
                 let content = serde_json::to_string(rpc_context.0.lock().unwrap().deref())?;
-                let length = content.len();
+                let length = content.len() as i32;
                 // TODO: consider some checks against directory traversal
                 if let Err(e) = fs::write(path, content) {
                     warn!("Unable to write to file: {}", e);
                 }
-                Ok(RpcOutput::Length(length))
+                Ok(length)
             } else {
-                Ok(RpcOutput::Summary(rpc_context.0.lock().unwrap().clone()))
+                Ok(-1)
             }
-        })
-        .unwrap();
+        }).unwrap();
     module
 }
 
@@ -60,10 +61,4 @@ fn create_rpc_module(rpc_context: RpcContext) -> RpcModule<RpcContext> {
 pub struct ReportParams {
     /// If present then [NetworkSummary] will be written to given file.
     file: Option<PathBuf>,
-}
-
-#[derive(Serialize)]
-enum RpcOutput {
-    Length(usize),
-    Summary(NetworkSummary),
 }

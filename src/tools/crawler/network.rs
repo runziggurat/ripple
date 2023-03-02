@@ -1,6 +1,6 @@
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet},
-    net::IpAddr,
+    net::SocketAddr,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -18,14 +18,14 @@ const SUMMARY_LOOP_INTERVAL: Duration = Duration::from_secs(10);
 
 #[derive(Default)]
 pub struct KnownNetwork {
-    nodes: RwLock<HashMap<IpAddr, KnownNode>>,
+    nodes: RwLock<HashMap<SocketAddr, KnownNode>>,
     connections: RwLock<HashSet<KnownConnection>>,
 }
 
 impl KnownNetwork {
     /// Inserts addr to known_nodes if not yet present (so to avoid overriding the node's statistics).
     /// Returns true if it's a new node, false otherwise.
-    pub(super) async fn new_node(&self, addr: IpAddr) -> bool {
+    pub(super) async fn new_node(&self, addr: SocketAddr) -> bool {
         let mut nodes = self.nodes.write().await;
         if let Entry::Vacant(e) = nodes.entry(addr) {
             e.insert(KnownNode::default());
@@ -37,7 +37,7 @@ impl KnownNetwork {
     }
 
     /// Inserts connection from `from` to `peers`.
-    pub(super) async fn insert_connections(&self, from: IpAddr, peers: &[IpAddr]) {
+    pub(super) async fn insert_connections(&self, from: SocketAddr, peers: &[SocketAddr]) {
         let mut connections = self.connections.write().await;
         peers.iter().for_each(|peer| {
             connections.insert(KnownConnection::new(from, *peer));
@@ -47,7 +47,7 @@ impl KnownNetwork {
     /// Updates stats for `peer`.
     pub(super) async fn update_stats(
         &self,
-        peer: IpAddr,
+        peer: SocketAddr,
         connecting_time: Duration,
         server_version: String,
     ) {
@@ -60,14 +60,14 @@ impl KnownNetwork {
     }
 
     /// Increases connection failures to the `addr` and returns its new value.
-    pub(super) async fn increase_connection_failures(&self, addr: IpAddr) -> u8 {
+    pub(super) async fn increase_connection_failures(&self, addr: SocketAddr) -> u8 {
         let mut nodes = self.nodes.write().await;
         let mut node = nodes.get_mut(&addr).unwrap();
         node.connection_failures = node.connection_failures.saturating_add(1);
         node.connection_failures
     }
 
-    pub(super) async fn set_handshake_successful(&self, addr: IpAddr, success: bool) {
+    pub(super) async fn set_handshake_successful(&self, addr: SocketAddr, success: bool) {
         let mut nodes = self.nodes.write().await;
         let mut node = nodes.get_mut(&addr).unwrap();
         node.handshake_successful = success;
@@ -79,7 +79,7 @@ impl KnownNetwork {
     }
 
     /// Returns a snapshot of the known nodes.
-    pub async fn nodes(&self) -> HashMap<IpAddr, KnownNode> {
+    pub async fn nodes(&self) -> HashMap<SocketAddr, KnownNode> {
         self.nodes.read().await.clone()
     }
 }

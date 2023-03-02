@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::IpAddr, sync::Arc, time::Duration};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 
 use spectre::{edge::Edge, graph::Graph};
 use ziggurat_core_crawler::summary::NetworkSummary;
@@ -10,7 +10,7 @@ pub const LAST_SEEN_CUTOFF: u64 = 10 * 60;
 
 #[derive(Default)]
 pub struct NetworkMetrics {
-    graph: Graph<IpAddr>,
+    graph: Graph<SocketAddr>,
 }
 
 impl NetworkMetrics {
@@ -35,26 +35,26 @@ pub(super) async fn new_network_summary(
 ) -> NetworkSummary {
     let nodes = known_network.nodes().await;
     let connections = known_network.connections().await;
-    let good_nodes = get_good_nodes(&nodes);
+    let good_nodes = get_good_nodes(&nodes).keys().copied().collect();
     let server_versions = get_server_versions(&nodes);
 
-    let indices = metrics
+    let nodes_indices = metrics
         .graph
-        .get_filtered_adjacency_indices(&good_nodes.keys().copied().collect());
+        .get_filtered_adjacency_indices(&good_nodes);
 
     NetworkSummary {
         num_known_nodes: nodes.len(),
         num_good_nodes: good_nodes.len(),
         num_known_connections: connections.len(),
-        node_ips: good_nodes.iter().map(|n| n.0.to_string()).collect(),
+        node_addrs: good_nodes,
         user_agents: server_versions,
         crawler_runtime,
-        indices,
+        nodes_indices,
         ..Default::default()
     }
 }
 
-fn get_server_versions(nodes: &HashMap<IpAddr, KnownNode>) -> HashMap<String, usize> {
+fn get_server_versions(nodes: &HashMap<SocketAddr, KnownNode>) -> HashMap<String, usize> {
     nodes.iter().fold(HashMap::new(), |mut map, (_, node)| {
         node.server.clone().map(|version| {
             map.entry(version)
@@ -65,7 +65,7 @@ fn get_server_versions(nodes: &HashMap<IpAddr, KnownNode>) -> HashMap<String, us
     })
 }
 
-fn get_good_nodes(nodes: &HashMap<IpAddr, KnownNode>) -> HashMap<IpAddr, KnownNode> {
+fn get_good_nodes(nodes: &HashMap<SocketAddr, KnownNode>) -> HashMap<SocketAddr, KnownNode> {
     nodes
         .iter()
         .filter_map(|(addr, node)| {

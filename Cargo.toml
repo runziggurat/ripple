@@ -97,7 +97,7 @@ optional = true
 
 [dependencies.ziggurat-core-crawler]
 git = "https://github.com/runziggurat/ziggurat-core"
-rev = "001c943"
+rev = "1a5c2e2"
 optional = true
 
 [features]

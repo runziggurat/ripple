@@ -18,12 +18,13 @@ Argument `--rpc-addr` takes socket address for the web server. Example:
 ```bash
 cargo r --bin crawler --features="crawler" -- --seed-addrs 35.162.59.23:51235 --rpc-addr 127.0.0.1:8080
 ```
-Crawler's metrics can be accessed by:
+The crawler's metrics can be accessed via a JSON-RPC call using the `getmetrics` method:
 ```bash
-curl --data-binary '{"jsonrpc": "2.0", "id":0, "method": "getmetrics", "params": {} }' -H 'content-type: application/json'  http://127.0.0.1:8080/
+curl --data-binary '{"jsonrpc": "2.0", "id":0, "method": "getmetrics"}' -H 'content-type: application/json'  http://127.0.0.1:8080/
 ```
 
-Field "params" accepts a json. Param's field "file" can be added to dump data to a file:
+If you prefer the data written directly to a file, you can use the `dumpmetrics` method instead.  The `params` field should contain a `file` property, which has the value of the file path to which the data will be written.
+
 ```bash
-curl --data-binary '{"jsonrpc": "2.0", "id":0, "method": "getmetrics", "params": {"file":"dump.json"}}' -H 'content-type: application/json'  http://127.0.0.1:8080/
+curl --data-binary '{"jsonrpc": "2.0", "id":0, "method": "dumpmetrics", "params": {"file":"dump.json"}}' -H 'content-type: application/json'  http://127.0.0.1:8080/
 ```

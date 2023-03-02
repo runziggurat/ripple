@@ -46,7 +46,7 @@ pub(super) fn crawl(
     // Wrapped in box to allow for async recursion.
     async move {
         tokio::spawn(async move {
-            if !known_network.new_node(ip).await {
+            if !known_network.new_node(SocketAddr::new(ip, port.unwrap_or(CRAWLER_DEFAULT_PORT))).await {
                 trace!("Skip crawling a known node {ip}");
                 return;
             }
@@ -67,7 +67,7 @@ pub(super) fn crawl(
                     }
                 }
                 if !success {
-                    let failures = known_network.increase_connection_failures(ip).await;
+                    let failures = known_network.increase_connection_failures(SocketAddr::new(ip, port.unwrap_or(CRAWLER_DEFAULT_PORT))).await;
                     if failures == u8::MAX {
                         warn!("Giving up connecting to {ip}");
                         break;
@@ -102,7 +102,7 @@ async fn try_handshake(addr: SocketAddr, known_network: Arc<KnownNetwork>) {
 
     let result = node.connect(addr).await.is_ok();
     known_network
-        .set_handshake_successful(addr.ip(), result)
+        .set_handshake_successful(addr, result)
         .await;
     if result {
         trace!("Successful handshake to {}", addr);
@@ -122,10 +122,10 @@ async fn try_crawling(
         Ok((response, connecting_time)) => {
             let addresses = extract_known_nodes(&response).await;
             known_network
-                .update_stats(ip, connecting_time, response.server.build_version)
+                .update_stats(SocketAddr::new(ip, port), connecting_time, response.server.build_version)
                 .await;
-            let peers = addresses.iter().map(|(ip, _)| *ip).collect::<Vec<_>>();
-            known_network.insert_connections(ip, &peers).await;
+            let peers = addresses.iter().map(|(ip, port)| SocketAddr::new(*ip, port.unwrap_or(CRAWLER_DEFAULT_PORT))).collect::<Vec<_>>();
+            known_network.insert_connections(SocketAddr::new(ip, port), &peers).await;
             for (ip, port) in addresses {
                 crawl(client.clone(), ip, port, known_network.clone()).await;
             }
