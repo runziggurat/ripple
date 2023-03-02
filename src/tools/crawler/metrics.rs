@@ -38,9 +38,7 @@ pub(super) async fn new_network_summary(
     let good_nodes = get_good_nodes(&nodes).keys().copied().collect();
     let server_versions = get_server_versions(&nodes);
 
-    let nodes_indices = metrics
-        .graph
-        .get_filtered_adjacency_indices(&good_nodes);
+    let nodes_indices = metrics.graph.get_filtered_adjacency_indices(&good_nodes);
 
     NetworkSummary {
         num_known_nodes: nodes.len(),

@@ -10,7 +10,7 @@ use jsonrpsee::{
     server::{ServerBuilder, ServerHandle},
     RpcModule,
 };
-use serde::{Deserialize};
+use serde::Deserialize;
 use tracing::{debug, warn};
 use ziggurat_core_crawler::summary::NetworkSummary;
 
@@ -36,10 +36,13 @@ pub async fn initialize_rpc_server(rpc_addr: SocketAddr, rpc_context: RpcContext
 
 fn create_rpc_module(rpc_context: RpcContext) -> RpcModule<RpcContext> {
     let mut module = RpcModule::new(rpc_context);
-    module.register_method("getmetrics", |_params, rpc_context| {
+    module
+        .register_method("getmetrics", |_params, rpc_context| {
             Ok(rpc_context.0.lock().unwrap().clone())
-        }).unwrap();
-    module.register_method("dumpmetrics", |params, rpc_context| {
+        })
+        .unwrap();
+    module
+        .register_method("dumpmetrics", |params, rpc_context| {
             let report_params = params.parse::<ReportParams>()?;
             if let Some(path) = report_params.file {
                 let content = serde_json::to_string(rpc_context.0.lock().unwrap().deref())?;
@@ -52,7 +55,8 @@ fn create_rpc_module(rpc_context: RpcContext) -> RpcModule<RpcContext> {
             } else {
                 Ok(-1)
             }
-        }).unwrap();
+        })
+        .unwrap();
     module
 }
 
