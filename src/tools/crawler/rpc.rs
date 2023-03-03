@@ -11,8 +11,19 @@ use jsonrpsee::{
     RpcModule,
 };
 use serde::Deserialize;
+use serde::Serialize;
 use tracing::{debug, warn};
 use ziggurat_core_crawler::summary::NetworkSummary;
+
+#[derive(Default, Clone, Deserialize, Serialize)]
+pub struct DumpSummary {
+    /// 'success' or 'fail'.
+    pub status: String,
+    /// file length written, -1 if error
+    pub length: i32,
+    /// empty if success; error message if fail
+    pub message: String,
+}
 
 pub struct RpcContext(Arc<Mutex<NetworkSummary>>);
 
@@ -53,10 +64,24 @@ fn create_rpc_module(rpc_context: RpcContext) -> RpcModule<RpcContext> {
                 // TODO: consider some checks against directory traversal
                 if let Err(e) = fs::write(path, response) {
                     warn!("Unable to write to file: {}", e);
+                    Ok(DumpSummary {
+                        status: "fail".to_string(),
+                        length: -1,
+                        message: "Unable to write file: ".to_string() + &e.to_string(),
+                    })
+                } else {
+                    Ok(DumpSummary {
+                        status: "success".to_string(),
+                        length: length,
+                        message: "".to_string(),
+                    })
                 }
-                Ok(length)
             } else {
-                Ok(-1)
+                Ok(DumpSummary {
+                    status: "fail".to_string(),
+                    length: -1,
+                    message: "No file parameter in params".to_string(),
+                })
             }
         })
         .unwrap();
