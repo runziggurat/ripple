@@ -10,8 +10,7 @@ use jsonrpsee::{
     server::{ServerBuilder, ServerHandle},
     RpcModule,
 };
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use ziggurat_core_crawler::summary::NetworkSummary;
 
