@@ -23,7 +23,7 @@ use crate::{
         proto::{tm_ping::PingType, TmPing},
     },
     setup::node::{Node, NodeType},
-    tools::{config::TestConfig, ips::IPS, synth_node::SyntheticNode},
+    tools::{config::SynthNodeCfg, ips::IPS, synth_node::SyntheticNode},
 };
 
 const MAX_PEERS: usize = 100;
@@ -156,7 +156,7 @@ async fn p001_t1_PING_PONG_throughput() {
 
 #[allow(unused_must_use)] // just for result of the timeout
 async fn simulate_peer(node_addr: SocketAddr, socket: TcpSocket) {
-    let config = TestConfig::default();
+    let config = SynthNodeCfg::default();
 
     let mut synth_node = SyntheticNode::new(&config).await;
 

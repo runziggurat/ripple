@@ -16,7 +16,7 @@ use ziggurat_core_utils::err_constants::{
 
 use crate::{
     setup::node::{Node, NodeType},
-    tools::{config::TestConfig, ips::IPS, synth_node::SyntheticNode},
+    tools::{config::SynthNodeCfg, ips::IPS, synth_node::SyntheticNode},
 };
 
 const METRIC_ACCEPTED: &str = "perf_conn_accepted";
@@ -250,7 +250,7 @@ async fn p002_connections_load() {
 }
 
 async fn simulate_peer(node_addr: SocketAddr, handshake_complete: Sender<()>, socket: TcpSocket) {
-    let config = TestConfig::default();
+    let config = SynthNodeCfg::default();
 
     let mut synth_node = SyntheticNode::new(&config).await;
 

@@ -1,0 +1,110 @@
+name: rippled
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Every day at 6:00 AM UTC.
+
+jobs:
+  install-rippled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install git pkg-config protobuf-compiler libprotobuf-dev libssl-dev wget build-essential doxygen
+          wget https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3-Linux-x86_64.sh
+          sudo sh cmake-3.16.3-Linux-x86_64.sh --prefix=/usr/local --exclude-subdir
+      - name: Compile boost
+        run: |
+          wget https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz
+          tar xvzf boost_1_75_0.tar.gz
+          cd boost_1_75_0
+          ./bootstrap.sh
+          ./b2 -j $(nproc)
+      - name: Clone and build rippled
+        env:
+          BOOST_ROOT: /home/runner/work/xrpl/xrpl/boost_1_75_0
+        run: |
+          git clone https://github.com/XRPLF/rippled
+          cd rippled
+          git checkout master
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build .
+      - uses: actions/upload-artifact@v3
+        with:
+          name: rippled-executable
+          path: ./rippled/build/rippled
+
+  install-ziggurat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --all-targets --no-run --features performance
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ziggurat-executable
+          path: ./target/debug/deps/ziggurat_*
+
+  test-rippled:
+    runs-on: ubuntu-latest
+    needs: [ install-ziggurat, install-rippled ]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - run: rustup toolchain install stable --profile minimal
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - uses: actions/download-artifact@v3
+        with:
+          name: rippled-executable
+          path: ./rippled
+      - uses: actions/download-artifact@v3
+        with:
+          name: ziggurat-executable
+          path: ./ziggurat
+      - name: Enable openSSL legacy functions
+        run: |
+          cp /etc/ssl/openssl.cnf ./
+          sed -i 's/^\#openssl_conf = openssl_init/openssl_conf = openssl_init/' openssl.cnf
+          sed -i '/^\default = default_sect/a legacy = legacy_sect' openssl.cnf
+          sed -i '/^\[default_sect\]/a activate = 1' openssl.cnf
+          echo "[legacy_sect]" >> openssl.cnf
+          echo "activate = 1" >> openssl.cnf
+      - name: Run setup script
+        env:
+          OPENSSL_CONF: /home/runner/work/xrpl/xrpl/openssl.cnf
+          RIPPLED_BIN_PATH: /home/runner/work/xrpl/xrpl/rippled
+        run: |
+          pip3 install xrpl-py
+          chmod +x rippled/rippled
+          ./tools/setup_env.sh
+      - name: Prepare IP addresses
+        run: sudo python3 ./tools/ips.py --subnet 1.1.1.0/24 --file src/tools/ips.rs --dev lo
+      - name: Run ziggurat suite
+        continue-on-error: true
+        run: |
+          rm ./ziggurat/*.d
+          mv ./ziggurat/ziggurat_* ziggurat_test
+          chmod +x ziggurat_test
+          mkdir -p results/rippled
+          rm -f results/rippled/latest.jsonl
+          ./ziggurat_test --test-threads=1 --nocapture -Z unstable-options --report-time --format json > results/rippled/latest.jsonl
+          cat results/rippled/latest.jsonl
+      - name: Git
+        run: |
+          FILENAME=$(date +%Y-%m-%d)
+          cd results/rippled
+          cp latest.jsonl $FILENAME.jsonl
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          gzip $FILENAME.jsonl
+          git pull
+          git add ./
+          git commit -m "ci: rippled suite results"
+          git push

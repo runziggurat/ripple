@@ -5,7 +5,7 @@ use tempfile::TempDir;
 use crate::{
     fuzzing::{random_bytes, seeded_rng},
     setup::node::{Node, NodeType},
-    tools::{config::TestConfig, synth_node::SyntheticNode},
+    tools::{config::SynthNodeCfg, synth_node::SyntheticNode},
     wait_until,
 };
 
@@ -56,8 +56,11 @@ async fn r004_node_must_disconnect_when_receiving_random_bytes_pre_handshake() {
         .await
         .expect("unable to start the node");
 
-    let mut cfg: TestConfig = Default::default();
-    cfg.synth_node_config.do_handshake = false; // Disable handshake.
+    let cfg = SynthNodeCfg {
+        handshake: None, // Disable handshake.
+        ..Default::default()
+    };
+
     for payload in payloads {
         let synth_node = SyntheticNode::new(&cfg).await;
         synth_node.connect(node.addr()).await.unwrap();

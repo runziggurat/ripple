@@ -11,7 +11,7 @@ use crate::{
         constants::{DEFAULT_PORT, SYNTHETIC_NODE_PUBLIC_KEY},
         node::{Node, NodeType},
     },
-    tools::{config::TestConfig, synth_node::SyntheticNode},
+    tools::{config::SynthNodeCfg, synth_node::SyntheticNode},
 };
 
 #[allow(non_snake_case)]
@@ -21,10 +21,11 @@ async fn c024_TM_CLUSTER_node_should_connect_to_other_nodes_in_cluster() {
 
     // Start a synthetic node configured to use known keys so that rippled knows who it's talking to.
     let synth_node_ip = "127.0.0.2".parse().unwrap();
-    let mut test_config = TestConfig::default();
+    let mut test_config = SynthNodeCfg::default();
     test_config.pea2pea_config.listener_ip = Some(IpAddr::V4(synth_node_ip));
     test_config.pea2pea_config.desired_listening_port = Some(DEFAULT_PORT);
-    test_config.synth_node_config.generate_new_keys = false;
+    test_config.generate_new_keys = false;
+
     let mut synth_node = SyntheticNode::new(&test_config).await;
     let listening_addr = synth_node
         .start_listening()

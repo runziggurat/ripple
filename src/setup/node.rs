@@ -38,6 +38,7 @@ async fn wait_for_start(addr: SocketAddr) {
     .unwrap();
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ChildExitCode {
     Success,
     ErrorCode(Option<i32>),

@@ -13,9 +13,9 @@ use secp256k1::{
 use tokio::{net::TcpSocket, sync::mpsc::Sender};
 
 use crate::{
-    protocol::codecs::message::BinaryMessage,
+    protocol::{codecs::message::BinaryMessage, handshake::HandshakeCfg},
     setup::constants::{SYNTHETIC_NODE_PRIVATE_KEY, SYNTHETIC_NODE_PUBLIC_KEY},
-    tools::{config::TestConfig, tls_cert},
+    tools::{config::SynthNodeCfg, tls_cert},
 };
 
 // A synthetic node adhering to Ripple's network protocol.
@@ -25,18 +25,7 @@ pub struct InnerNode {
     pub(crate) sender: Sender<(SocketAddr, BinaryMessage)>,
     pub crypto: Arc<Crypto>,
     pub tls: Tls,
-    pub config: HandshakeConfig,
-}
-
-// Contains configuration for resistance testing.
-#[derive(Clone, Default)]
-pub struct HandshakeConfig {
-    // Either 'User-Agent' or 'Server' header (depending on the connection side).
-    pub ident: String,
-    // Whether to flip a random bit in shared_value later used for session signing.
-    pub handshake_bit_flip_shared_val: bool,
-    // Whether to flip a random bit in public_key.
-    pub handshake_bit_flip_pub_key: bool,
+    pub handshake_cfg: Option<HandshakeCfg>,
 }
 
 // An object containing TLS handlers.
@@ -60,11 +49,11 @@ impl Pea2Pea for InnerNode {
 }
 
 impl InnerNode {
-    pub async fn new(config: &TestConfig, sender: Sender<(SocketAddr, BinaryMessage)>) -> Self {
+    pub async fn new(cfg: &SynthNodeCfg, sender: Sender<(SocketAddr, BinaryMessage)>) -> Self {
         // generate the keypair and prepare the crypto engine
 
         let engine = Secp256k1::new();
-        let (private_key, public_key) = if config.synth_node_config.generate_new_keys {
+        let (private_key, public_key) = if cfg.generate_new_keys {
             engine.generate_keypair(&mut secp256k1::rand::thread_rng())
         } else {
             decode_predefined_keys().expect("invalid predefined keys")
@@ -92,20 +81,14 @@ impl InnerNode {
 
         // the node
         Self {
-            node: Node::new(config.pea2pea_config.clone()),
+            node: Node::new(cfg.pea2pea_config.clone()),
             sender,
             crypto,
             tls: Tls {
                 acceptor,
                 connector,
             },
-            config: HandshakeConfig {
-                ident: config.synth_node_config.ident.clone(),
-                handshake_bit_flip_shared_val: config
-                    .synth_node_config
-                    .handshake_bit_flip_shared_val,
-                handshake_bit_flip_pub_key: config.synth_node_config.handshake_bit_flip_pub_key,
-            },
+            handshake_cfg: cfg.handshake.clone(),
         }
     }
 

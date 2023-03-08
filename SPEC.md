@@ -363,11 +363,11 @@ The test index makes use of symbolic language in describing connection and messa
 
 ### ZG-RESISTANCE-003
 
-    The node rejects the handshake when there is a bit flip in either a public_key or a shared_value (which later results in
-    an invalid session signature). This should happen for both types of connection: Initiator and Responder.
-    These tests attempt handshakes with intentionally broken public_key and signature and assert whether
-    rippled dropped connection after some short time.
-
+    The node rejects the handshake when there is an in any of handshake field: 
+    1. Bit flip in a public_key. 
+    2. Bit flip in a shared_value (which later results in an invalid session signature). 
+    3. "Connection" HTTP field is incorrect.
+    4. "Connect-As" HTTP field is incorrect.
 
 ### ZG-RESISTANCE-004
 

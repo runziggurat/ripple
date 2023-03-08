@@ -1,4 +1,39 @@
-/// The Ripple handshake implementation.
+//! The Ripple handshake implementation.
+//!
+//! Real request/response examples:
+//!
+//! --- HTTP request ---
+//! > GET / HTTP/1.1\r\n
+//! > User-Agent: rippled-1.9.3+47dec467ea659c1b64c7b5f4eb8a1bfa9759ff91.DEBUG\r\n
+//! > Upgrade: XRPL/2.0, XRPL/2.1, XRPL/2.2\r\n
+//! > Connection: Upgrade\r\n
+//! > Connect-As: Peer\r\n
+//! > Crawl: public\r\n
+//! > X-Protocol-Ctl: ledgerreplay=1;txrr=1;\r\n
+//! > Network-Time: 731242816\r\n
+//! > Public-Key: n9KPZKMNpJqkb6ov4k5BSX3c2Jh4ENHn5NNZuLaH4HpHSJXK4fZq\r\n
+//! > Session-Signature: MEUCIQDn5qlnxdhmPWlL33aJHs7LflciEwk2B6dzwmxTrIA3rQIgQ9KbnI6pbTwmikGglFmfE61l2JZI79m2NFl+moOn72A=\r\n
+//! > Closed-Ledger: cIaWNDUFFgvLmCesvyiXUgBh0mGaliIrmZFqqglAlAM=\r\n
+//! > Previous-Ledger: 6bsyOYDSAux+Ubqyqo41NT+ce9q1m/FzeOrdTQSG758=\r\n
+//! > \r\n
+//! --------------------
+//!
+//! --- HTTP response ---
+//! > "HTTP/1.1 101 Switching Protocols\r\n
+//! > Connection: Upgrade\r\n
+//! > Upgrade: XRPL/2.2\r\n
+//! > Connect-As: Peer\r\n
+//! > Server: rippled-1.9.3+47dec467ea659c1b64c7b5f4eb8a1bfa9759ff91.DEBUG\r\n
+//! > Crawl: public\r\n
+//! > X-Protocol-Ctl: ledgerreplay=1;txrr=1;\r\n
+//! > Network-Time: 731242634\r\n
+//! > Public-Key: n9KcgYqxCQ9fCzrDDXsJVHxXW7QteDvPDe2bvcz7gHcYv52bU4u4\r\n
+//! > Session-Signature: MEQCIA3hEeVR6fLiH4aHmUDd4Zvp846qu3CIBs30g6iU59PYAiAH78yxxlTQKVpDKPXYouxxDgxTAk869WiS62U8bTRqaA==\r\n
+//! > Closed-Ledger: X72fvYvkYwPj7iFsE4OTiSwSd5Okz40P+eBRwsOXo4g=\r\n
+//! > Previous-Ledger: 6bsyOYDSAux+Ubqyqo41NT+ce9q1m/FzeOrdTQSG758=\r\n
+//! > \r\n"
+//! ---------------------
+
 use std::{io, pin::Pin};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -17,11 +52,93 @@ use crate::{
     tools::inner_node::{Crypto, InnerNode},
 };
 
+// Default handshake header values.
+const CONNECTION: &str = "Upgrade";
+const UPGRADE_REQ: &str = "XRPL/2.0, XRPL/2.1, XRPL/2.2";
+const UPGRADE_RSP: &str = "XRPL/2.2";
+const CONNECT_AS: &str = "Peer";
+// txrr - enables transaction relay
+// ledgerreplay - enables ledger replay
+const X_PROTOCOL_CTL: &str = "txrr=1;ledgerreplay=1";
+
 #[repr(u8)]
 enum NodeType {
     Public = 28,
     #[allow(dead_code)]
     Private = 32,
+}
+
+/// Handshake configuration allows some customization of the handshake procedure.
+#[derive(Clone)]
+pub struct HandshakeCfg {
+    /// Will flip a random bit in a random byte of shared value used for session signing.
+    pub bitflip_shared_val: bool,
+
+    /// Will flip a random bit in a random byte of the public key.
+    pub bitflip_pub_key: bool,
+
+    /// Identification header to be set during a handshake.
+    /// Either 'User-Agent' or 'Server' depending on connection side.
+    pub http_ident: String,
+
+    /// A handshake field for the connection type.
+    pub http_connection: String,
+
+    /// A handshake field for the connection upgrade field - available versions sent
+    /// in the handshake request.
+    pub http_upgrade_req: String,
+
+    /// A handshake field for the connection upgrade field - a chosen version sent in
+    /// the handshake response.
+    pub http_upgrade_rsp: String,
+
+    /// A handshake field for the connector name.
+    pub http_connect_as: String,
+
+    /// A handshake field for the protocol CTL.
+    pub http_x_protocol_ctl: String,
+
+    /// A handshake field which tells us whether the node is crawlable.
+    pub http_crawl: Option<String>,
+
+    /// A handshake field for the network time.
+    pub http_network_time: Option<String>,
+
+    /// A handshake field which contains a hash for the closed ledger.
+    pub http_closed_ledger: Option<String>,
+
+    /// A handshake field which contains a hash for the previous ledger.
+    pub http_prev_ledger: Option<String>,
+
+    /// A random field for testing HTTP headers.
+    pub http_unexpected_extra_field_and_value: Option<String>,
+}
+
+impl Default for HandshakeCfg {
+    fn default() -> Self {
+        Self {
+            // Handshake procedure options.
+            bitflip_shared_val: false,
+            bitflip_pub_key: false,
+
+            // Mandatory handshake HTTP fields.
+            http_ident: "rippled-1.9.4".into(),
+            http_connection: CONNECTION.to_owned(),
+            http_upgrade_req: UPGRADE_REQ.to_owned(),
+            http_upgrade_rsp: UPGRADE_RSP.to_owned(),
+            http_connect_as: CONNECT_AS.to_owned(),
+            http_x_protocol_ctl: X_PROTOCOL_CTL.to_owned(),
+
+            // Optional handshake HTTP fields.
+            http_crawl: None,
+            http_network_time: None,
+            http_closed_ledger: None,
+            http_prev_ledger: None,
+
+            // A random field.
+            http_unexpected_extra_field_and_value: None,
+        }
+    }
 }
 
 // Used to populate the Public-Key field.
@@ -81,6 +198,12 @@ impl Handshake for InnerNode {
         let stream = self.take_stream(&mut conn);
         let addr = conn.addr();
 
+        // The function shouldn't be called in case the handshake config is not set.
+        let hs_cfg = self
+            .handshake_cfg
+            .as_ref()
+            .expect("a handshake config is not set");
+
         let tls_stream = match own_conn_side {
             ConnectionSide::Initiator => {
                 let ssl = self
@@ -93,7 +216,7 @@ impl Handshake for InnerNode {
                 let mut tls_stream = SslStream::new(ssl, stream).unwrap();
 
                 Pin::new(&mut tls_stream).connect().await.map_err(|e| {
-                    error!(parent: self.node().span(), "TLS handshake error: {}", e);
+                    error!(parent: self.node().span(), "TLS handshake error: {e}");
                     io::ErrorKind::InvalidData
                 })?;
 
@@ -102,10 +225,10 @@ impl Handshake for InnerNode {
 
                 let public_key = &mut self.crypto.public_key.serialize().clone();
                 // introduce intentional errors into handshake if needed
-                if self.config.handshake_bit_flip_shared_val {
+                if hs_cfg.bitflip_shared_val {
                     randomly_flip_bit(&mut shared_value);
                 }
-                if self.config.handshake_bit_flip_pub_key {
+                if hs_cfg.bitflip_pub_key {
                     randomly_flip_bit(public_key.as_mut_slice());
                 }
 
@@ -114,29 +237,46 @@ impl Handshake for InnerNode {
                 let sig = create_session_signature(&self.crypto, &shared_value);
 
                 // prepare the HTTP request message
-                let mut request = Vec::new();
-                request.extend_from_slice(b"GET / HTTP/1.1\r\n");
-                request
-                    .extend_from_slice(format!("User-Agent: {}\r\n", self.config.ident).as_bytes());
-                request.extend_from_slice(b"Connection: Upgrade\r\n");
-                request.extend_from_slice(b"Upgrade: XRPL/2.0, XRPL/2.1, XRPL/2.2\r\n"); // TODO: which ones should we handle?
-                request.extend_from_slice(b"Connect-As: Peer\r\n");
-                request.extend_from_slice(format!("Public-Key: {base58_pk}\r\n").as_bytes());
-                request.extend_from_slice(format!("Session-Signature: {sig}\r\n").as_bytes());
-                // txrr - enables transaction relay
-                // ledgerreplay - enables ledger replay
-                request.extend_from_slice(b"X-Protocol-Ctl: txrr=1;ledgerreplay=1\r\n");
-                request.extend_from_slice(b"\r\n");
-                let request = Bytes::from(request);
+                let mut req = Vec::new();
+                let mut req_header = |mut header: String| {
+                    // Append `\r\n' to every header.
+                    header.push_str("\r\n");
+                    req.extend_from_slice(header.as_bytes());
+                };
+
+                req_header("GET / HTTP/1.1".into());
+                req_header(format!("User-Agent: {}", hs_cfg.http_ident));
+                req_header(format!("Upgrade: {}", hs_cfg.http_upgrade_req));
+                req_header(format!("Connection: {}", hs_cfg.http_connection));
+                req_header(format!("Connect-As: {}", hs_cfg.http_connect_as));
+                if let Some(ref crawl) = hs_cfg.http_crawl {
+                    req_header(format!("Crawl: {crawl}"))
+                };
+                req_header(format!("X-Protocol-Ctl: {}", hs_cfg.http_x_protocol_ctl));
+                if let Some(ref time) = hs_cfg.http_network_time {
+                    req_header(format!("Network-Time: {time}"))
+                };
+                req_header(format!("Public-Key: {base58_pk}"));
+                req_header(format!("Session-Signature: {sig}"));
+                if let Some(ref ledger) = hs_cfg.http_closed_ledger {
+                    req_header(format!("Closed-Ledger: {ledger}"))
+                };
+                if let Some(ref ledger) = hs_cfg.http_prev_ledger {
+                    req_header(format!("Previous-Ledger: {ledger}"))
+                };
+                if let Some(ref header) = hs_cfg.http_unexpected_extra_field_and_value {
+                    req_header(header.clone())
+                };
+                req_header("".into()); // An HTTP header ends with '\r\n'
 
                 // use the HTTP codec to read/write the (post-TLS) handshake messages
+                let req = Bytes::from(req);
                 let codec = HttpCodec::new(self.node().span().clone(), HttpMsg::Response);
                 let mut framed = Framed::new(&mut tls_stream, codec);
 
-                trace!(parent: self.node().span(), "sending a request to {}: {:?}", addr, request);
-
                 // send the handshake HTTP request message
-                framed.send(request).await?;
+                trace!(parent: self.node().span(), "sending a request to {addr}: {req:?}");
+                framed.send(req).await?;
 
                 // read the HTTP request message (there should only be headers)
                 let _ = framed.try_next().await?.ok_or(io::ErrorKind::InvalidData)?;
@@ -148,7 +288,7 @@ impl Handshake for InnerNode {
                 let mut tls_stream = SslStream::new(ssl, stream).unwrap();
 
                 Pin::new(&mut tls_stream).accept().await.map_err(|e| {
-                    error!(parent: self.node().span(), "TLS handshake error: {}", e);
+                    error!(parent: self.node().span(), "TLS handshake error: {e}");
                     io::ErrorKind::InvalidData
                 })?;
 
@@ -162,15 +302,15 @@ impl Handshake for InnerNode {
                 // read the HTTP request message (there should only be headers)
                 let request_body = framed.try_next().await?.ok_or(io::ErrorKind::InvalidData)?;
                 if !request_body.is_empty() {
-                    warn!(parent: self.node().span(), "trailing bytes in the handshake request from {}: {:?}", addr, request_body);
+                    warn!(parent: self.node().span(), "trailing bytes in the handshake request from {addr}: {request_body:?}");
                 }
 
                 let public_key = &mut self.crypto.public_key.serialize().clone();
                 // introduce intentional errors into handshake if needed
-                if self.config.handshake_bit_flip_shared_val {
+                if hs_cfg.bitflip_shared_val {
                     randomly_flip_bit(&mut shared_value);
                 }
-                if self.config.handshake_bit_flip_pub_key {
+                if hs_cfg.bitflip_pub_key {
                     randomly_flip_bit(public_key.as_mut_slice());
                 }
                 // base58-encode the public key and create the session signature
@@ -178,22 +318,41 @@ impl Handshake for InnerNode {
                 let sig = create_session_signature(&self.crypto, &shared_value);
 
                 // prepare the response
-                let mut response = Vec::new();
-                response.extend_from_slice(b"HTTP/1.1 101 Switching Protocols\r\n");
-                response.extend_from_slice(b"Connection: Upgrade\r\n");
-                response.extend_from_slice(b"Upgrade: XRPL/2.2\r\n");
-                response.extend_from_slice(b"Connect-As: Peer\r\n");
-                response.extend_from_slice(format!("Server: {}\r\n", self.config.ident).as_bytes());
-                response.extend_from_slice(format!("Public-Key: {base58_pk}\r\n").as_bytes());
-                response.extend_from_slice(format!("Session-Signature: {sig}\r\n").as_bytes());
-                response.extend_from_slice(b"X-Protocol-Ctl: txrr=1\r\n");
-                response.extend_from_slice(b"\r\n");
-                let response = Bytes::from(response);
+                let mut rsp = Vec::new();
+                let mut rsp_header = |mut header: String| {
+                    header.push_str("\r\n");
+                    rsp.extend_from_slice(header.as_bytes());
+                };
 
-                trace!(parent: self.node().span(), "responding to {} with {:?}", addr, response);
+                rsp_header("HTTP/1.1 101 Switching Protocols".into());
+                rsp_header(format!("Connection: {}", hs_cfg.http_connection));
+                rsp_header(format!("Upgrade: {}", hs_cfg.http_upgrade_rsp));
+                rsp_header(format!("Connect-As: {}", hs_cfg.http_connect_as));
+                rsp_header(format!("Server: {}", hs_cfg.http_ident));
+                if let Some(ref crawl) = hs_cfg.http_crawl {
+                    rsp_header(format!("Crawl: {crawl}"))
+                };
+                rsp_header(format!("X-Protocol-Ctl: {}", hs_cfg.http_x_protocol_ctl));
+                if let Some(ref time) = hs_cfg.http_network_time {
+                    rsp_header(format!("Network-Time: {time}"))
+                };
+                rsp_header(format!("Public-Key: {base58_pk}"));
+                rsp_header(format!("Session-Signature: {sig}"));
+                if let Some(ref ledger) = hs_cfg.http_closed_ledger {
+                    rsp_header(format!("Closed-Ledger: {ledger}"))
+                };
+                if let Some(ref ledger) = hs_cfg.http_prev_ledger {
+                    rsp_header(format!("Previous-Ledger: {ledger}"))
+                };
+                if let Some(ref header) = hs_cfg.http_unexpected_extra_field_and_value {
+                    rsp_header(header.clone())
+                };
+                rsp_header("".into()); // An HTTP header ends with '\r\n'
 
                 // send the handshake HTTP response message
-                framed.send(response).await?;
+                let rsp = Bytes::from(rsp);
+                trace!(parent: self.node().span(), "responding to {addr} with {rsp:?}");
+                framed.send(rsp).await?;
 
                 tls_stream
             }

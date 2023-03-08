@@ -21,7 +21,7 @@ use crate::{
         writing::MessageOrBytes,
     },
     tools::{
-        config::TestConfig,
+        config::SynthNodeCfg,
         constants::{EXPECTED_RESULT_TIMEOUT, SYNTH_NODE_QUEUE_DEPTH},
         inner_node::InnerNode,
     },
@@ -43,14 +43,16 @@ pub struct SyntheticNode {
 }
 
 impl SyntheticNode {
-    pub async fn new(config: &TestConfig) -> Self {
+    pub async fn new(config: &SynthNodeCfg) -> Self {
         let (sender, receiver) = mpsc::channel(SYNTH_NODE_QUEUE_DEPTH);
         let inner = InnerNode::new(config, sender).await;
-        if config.synth_node_config.do_handshake {
+
+        if config.handshake.is_some() {
             inner.enable_handshake().await;
         }
         inner.enable_reading().await;
         inner.enable_writing().await;
+
         Self { inner, receiver }
     }
 

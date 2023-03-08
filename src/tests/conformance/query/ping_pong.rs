@@ -10,8 +10,7 @@ use crate::{
         codecs::message::{BinaryMessage, Payload},
         proto::{tm_ping::PingType, TmPing},
     },
-    tests::conformance::perform_expected_message_test,
-    tools::config::TestConfig,
+    tests::conformance::{perform_expected_message_test, TestConfig},
 };
 
 #[tokio::test]

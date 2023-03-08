@@ -17,7 +17,7 @@ use ziggurat_core_utils::err_constants::{
 use crate::{
     setup::node::{Node, NodeType},
     tools::{
-        config::TestConfig,
+        config::SynthNodeCfg,
         crawl,
         synth_node::{self, SyntheticNode},
     },
@@ -51,8 +51,8 @@ enum TracingOpt {
 enum SynthNodeOpt {
     #[default]
     Off,
-    On_OnlyListening(TestConfig),
-    On_TryToConnect(TestConfig),
+    On_OnlyListening(SynthNodeCfg),
+    On_TryToConnect(SynthNodeCfg),
 }
 
 #[derive(Default)]
@@ -116,7 +116,7 @@ async fn dev002_t1_MONITOR_NODE_FOREVER_WITH_SYNTH_NODE_sn_is_conn_initiator() {
     let mut cfg = DevTestCfg::default();
     cfg.tracing = TracingOpt::On;
     cfg.crawl = PeriodicCrawlOpt::On(Duration::from_secs(5));
-    cfg.synth_node = SynthNodeOpt::On_TryToConnect(TestConfig::default());
+    cfg.synth_node = SynthNodeOpt::On_TryToConnect(SynthNodeCfg::default());
     node_run_forever(cfg).await;
 
     panic!("the node shouldn't have died");
@@ -132,7 +132,7 @@ async fn dev002_t2_MONITOR_NODE_FOREVER_WITH_SYNTH_NODE_sn_is_conn_responder() {
     cfg.log_to_stdout = NodeLogToStdout::On;
     cfg.tracing = TracingOpt::On;
     cfg.crawl = PeriodicCrawlOpt::On(Duration::from_secs(5));
-    cfg.synth_node = SynthNodeOpt::On_OnlyListening(TestConfig::default());
+    cfg.synth_node = SynthNodeOpt::On_OnlyListening(SynthNodeCfg::default());
     node_run_forever(cfg).await;
 
     panic!("the node shouldn't have died");

@@ -24,7 +24,7 @@ def get_account_info(account):
     except httpx.ConnectError:
         print("Server not responding")
         return False
-    print("response.status: ", response.status)
+    print("response.status: ", response.status, flush=True)
 
     # If request successful, prints information about the account.
     if response.status == ResponseStatus.SUCCESS:

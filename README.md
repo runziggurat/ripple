@@ -2,44 +2,30 @@
 
 The Ziggurat implementation for XRPLF's `rippled` nodes.
 
+## Prerequisites
+Ziggurat is written in stable Rust; you can install the Rust toolchain by following the official instructions [here](https://www.rust-lang.org/learn/get-started)
+
 ## Getting started
 
+### Preconditions
 1. Clone this repository.
 2. Build [rippled](https://github.com/XRPLF/rippled) from source.
-3. Create the `~/.ziggurat/ripple/setup` directories, and copy the `setup/validators.txt` file there.
-   ```
-   cp setup/validators.txt ~/.ziggurat/ripple/setup
-   ```
-4. In the same directory create a `config.toml` with the following contents:
-   ```
-   path = "<path to the directory where you built rippled>"
-   start_command = "./rippled"
-   ```
-5. Create a package of IP addresses which are required for performance tests. From the root repository directory run, e.g.:
-   Under Linux (to generate dummy devices with addresses):
-   ```
-   sudo python3 ./tools/ips.py --subnet 1.1.1.0/24 --file src/tools/ips.rs --dev_prefix test_zeth
-   ```
-   Under MacOS or Linux (to add whole subnet to loopback device - under Linux: lo, MacOS: lo0):
-   ```
-   sudo python3 ./tools/ips.py --subnet 1.1.1.0/24 --file src/tools/ips.rs --dev lo0
-   ```
-   Read ./tools/ips.py for more details.
-6. Run tests with:
-   ```
-   cargo +stable t -- --test-threads=1
+
+#### Running setup script
+3. Make sure you have python3 installed. You should be able to run `python3 --version`.
+4. Install `xrpl` python lib: `pip3 install xrpl-py`.
+
+   ##### **Mandatory step for Mac users!**
+   On MacOS, the `coreutils` package is also required. It can be installed with: `brew install coreutils`
+
+   Also make sure that these two `127.0.0.x` (where `x != 1`) addresses are enabled:
+   ```bash
+   sudo ifconfig lo0 alias 127.0.0.2 up;
+   sudo ifconfig lo0 alias 127.0.0.3 up;
    ```
 
-### Initial state
-Specific tests require an initial node state to be set up.
-Follow the steps below to save an initial state that can be loaded later in certain tests.
-
-#### Preparation (needs to be done once)
-1. Make sure you have python3 installed. You should be able to run `python3 --version`.
-2. Install `xrpl` python lib: `pip3 install xrpl-py`.
-
-##### Important note!
-The `xrlp` library depends on legacy openSSL functions that are disabled by default. In the case of error, make sure to explicitly enable legacy functions in the config file like so:
+   ##### **Important note!**
+   The `xrlp` library depends on legacy openSSL functions that are disabled by default. In the case of error, make sure to explicitly enable legacy functions in the config file, like so:
    ```
    openssl_conf = openssl_init
    
@@ -56,49 +42,49 @@ The `xrlp` library depends on legacy openSSL functions that are disabled by defa
    [legacy_sect]
    activate = 1
    ```
-You can find out the path to the config file with the following command: `openssl version -d`.
+   You can find out the path to the config file with the following command: `openssl version -d`.
 
-##### Mac users
-Make sure these two `127.0.0.x` (where `x != 1`) addresses are enabled:
+5. Export the path to the build folder to the `RIPPLED_BIN_PATH` environment variable.
+   ```bash
+   export RIPPLED_BIN_PATH="$HOME/path/to/ripple"
+6. Run the setup script (takes about 5 minutes):
+   ```bash
+   ./tools/setup_env.sh
+   ```
+
+#### Run tests
+Run conformance and resistance tests with the following command:
+```bash
+cargo +stable t -- --test-threads=1
 ```
-    sudo ifconfig lo0 alias 127.0.0.2 up;
-    sudo ifconfig lo0 alias 127.0.0.3 up;
+### Run performance tests
+Create a package of IP addresses which are required for performance tests.
+
+_NOTE: To run the `ips.py` script below, the user must be in the sudoers file in order to use this script.
+Script uses `ip`/`ipconfig` commands which require sudo privilages._
+
+From the root repository directory, depending on your OS, run one of the following commands.
+
+#### Preconditions under Linux
+Generate dummy devices with addresses:
+```bash
+python3 ./tools/ips.py --subnet 1.1.1.0/24 --file src/tools/ips.rs --dev_prefix test_zeth
 ```
 
-#### Transferring XRP from the Genesis account to a new account and saving the state
-1. In one terminal run test `cargo +stable t setup::testnet::test::run_testnet -- --ignored`.
-   The test will start a local testnet and will keep it alive for 10 minutes. Ensure that you complete the
-   following steps while above test is running.
+#### Preconditions under MacOS
+Add the whole subnet to the loopback device - can also be used on Linux (device name - Linux: `lo`, MacOS: `lo0`):
+```bash
+python3 ./tools/ips.py --subnet 1.1.0.0/24 --file src/tools/ips.rs --dev lo0
+```
 
-2. Run `python3 tools/account_info.py` to monitor state of the accounts. 
-   Wait until `ResponseStatus.SUCCESS` is reported for the genesis account. The response should include:
-   ```
-    "Account": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
-    "Balance": "100000000000000000",
-   ```
-   This should happen within about a minute.
-   Ignore error for the account `rNGknFCRBZguXcPqC63k6xTZnonSe6ZuWt` for the time being.
-3. Run `python3 tools/transfer.py` to transfer xrp from genesis account to a new account.
-4. Run `python3 tools/account_info.py` again to monitor accounts. The response for genesis account should include:
-   ```
-        "Account": "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
-        "Balance": "99999994999999990",
-   ```
-   and the response for the new account should include:
-   ```
-        "Account": "rNGknFCRBZguXcPqC63k6xTZnonSe6ZuWt",
-        "Balance": "5000000000",
-   ```
-5. Copy the node's files to directory referenced by constant `pub const STATEFUL_NODES_DIR`, currently:
-   ```
-   cp -a ~/.ziggurat/ripple/testnet/ ~/.ziggurat/ripple/stateful;
-   ```
-6. Now you can stop the test started in step 1.
-7. Perform cleanup:
-   ```
-   rm ~/.ziggurat/ripple/stateful/*/rippled.cfg;  # config files will be created when nodes are started
-   rm -rf ~/.ziggurat/ripple/testnet;             # not needed anymore
-   ```
+Read ./tools/ips.py for more details.
+
+#### Run tests
+Run performance tests with the following command:
+```bash
+cargo +stable t performance --features performance -- --test-threads=1
+```
+
 ## Test status
 
 Short overview of test cases and their current status. In case of failure, the behaviour observed is usually documented in the test case.

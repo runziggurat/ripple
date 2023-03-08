@@ -6,8 +6,8 @@ use crate::{
         constants::CONNECTION_TIMEOUT,
         node::{Node, NodeType},
     },
-    tests::conformance::perform_expected_message_test,
-    tools::{config::TestConfig, synth_node::SyntheticNode},
+    tests::conformance::{perform_expected_message_test, TestConfig},
+    tools::synth_node::SyntheticNode,
     wait_until,
 };
 
@@ -72,6 +72,7 @@ async fn c002_handshake_when_node_initiates_connection() {
 async fn c006_node_should_not_send_any_messages_if_no_handshake() {
     // ZG-CONFORMANCE-006
     let response_check = |_: &BinaryMessage| true;
-    perform_expected_message_test(TestConfig::default().with_handshake(false), &response_check)
+
+    perform_expected_message_test(TestConfig::default().with_handshake(None), &response_check)
         .await;
 }
