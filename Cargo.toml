@@ -92,7 +92,7 @@ features = ["ansi", "env-filter", "fmt", "parking_lot", "smallvec"]
 
 [dependencies.spectre]
 git = "https://github.com/niklaslong/spectre"
-rev = "f1d6698"
+rev = "9a0664f"
 optional = true
 
 [dependencies.ziggurat-core-crawler]
