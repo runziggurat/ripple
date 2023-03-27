@@ -1,3 +1,5 @@
+[![dependency status](https://deps.rs/repo/github/runziggurat/xrpl/status.svg)](https://deps.rs/repo/github/runziggurat/xrpl)
+
 # Ziggurat x XRPL
 
 The Ziggurat implementation for XRPLF's `rippled` nodes.
