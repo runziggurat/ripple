@@ -1,34 +1,17 @@
+name: basics
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-name: basics
-
 jobs:
-  check:
-    name: check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: rustup toolchain install stable --profile minimal
-      - run: cargo check --all-targets
+  core:
+    uses: ziggurat/ziggurat-core/.github/workflows/check-and-lint.yml@main
 
-  fmt:
-    name: fmt
+  check-crawler:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - run: rustup toolchain install nightly --profile minimal
-      - run: rustup component add rustfmt
-      - run: cargo fmt --all -- --check
-
-  clippy:
-    name: clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: rustup toolchain install stable --profile minimal
-      - run: rustup component add clippy
-      - run: cargo clippy --all-targets -- -D warnings
+      - uses: actions/checkout@v3
+      - run: cargo check --features=crawler
