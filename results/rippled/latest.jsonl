@@ -1,6 +1,6 @@
 { "type": "suite", "event": "started", "test_count": 64 }
 { "type": "test", "event": "started", "name": "protocol::codecs::message::tests::decode_and_encode" }
-{ "type": "test", "name": "protocol::codecs::message::tests::decode_and_encode", "event": "ok", "exec_time": 0.000220601 }
+{ "type": "test", "name": "protocol::codecs::message::tests::decode_and_encode", "event": "ok", "exec_time": 0.000241111 }
 { "type": "test", "event": "started", "name": "setup::node::test::run_stateful_nodes_in_parallel" }
 { "type": "test", "name": "setup::node::test::run_stateful_nodes_in_parallel", "event": "ignored", "message": "use only when changing src/setup files" }
 { "type": "test", "event": "started", "name": "setup::node::test::run_stateful_nodes_sequentially" }
@@ -14,65 +14,65 @@
 { "type": "test", "event": "started", "name": "setup::testnet::test::run_testnet" }
 { "type": "test", "name": "setup::testnet::test::run_testnet", "event": "ignored", "message": "used to set up a small testnet that can be used to procure node state" }
 { "type": "test", "event": "started", "name": "tests::conformance::cmd::cluster::c024_TM_CLUSTER_node_should_connect_to_other_nodes_in_cluster" }
-{ "type": "test", "name": "tests::conformance::cmd::cluster::c024_TM_CLUSTER_node_should_connect_to_other_nodes_in_cluster", "event": "ok", "exec_time": 10.633129954 }
+{ "type": "test", "name": "tests::conformance::cmd::cluster::c024_TM_CLUSTER_node_should_connect_to_other_nodes_in_cluster", "event": "ok", "exec_time": 11.091946162 }
 { "type": "test", "event": "started", "name": "tests::conformance::cmd::haveset::c020_MT_HAVESET_node_should_broadcast_transaction_set_to_all_peers" }
-{ "type": "test", "name": "tests::conformance::cmd::haveset::c020_MT_HAVESET_node_should_broadcast_transaction_set_to_all_peers", "event": "ok", "exec_time": 43.229179077 }
+{ "type": "test", "name": "tests::conformance::cmd::haveset::c020_MT_HAVESET_node_should_broadcast_transaction_set_to_all_peers", "event": "ok", "exec_time": 43.154321637 }
 { "type": "test", "event": "started", "name": "tests::conformance::cmd::squelch::c009_TM_SQUELCH_cannot_squelch_peer_ledger_proposals" }
-{ "type": "test", "name": "tests::conformance::cmd::squelch::c009_TM_SQUELCH_cannot_squelch_peer_ledger_proposals", "event": "ok", "exec_time": 4.329444403 }
+{ "type": "test", "name": "tests::conformance::cmd::squelch::c009_TM_SQUELCH_cannot_squelch_peer_ledger_proposals", "event": "ok", "exec_time": 4.095884843 }
 { "type": "test", "event": "started", "name": "tests::conformance::cmd::squelch::c016_TM_SQUELCH_squelch_distant_validators" }
-{ "type": "test", "name": "tests::conformance::cmd::squelch::c016_TM_SQUELCH_squelch_distant_validators", "event": "ok", "exec_time": 11.865810778 }
+{ "type": "test", "name": "tests::conformance::cmd::squelch::c016_TM_SQUELCH_squelch_distant_validators", "event": "ok", "exec_time": 16.71461294 }
 { "type": "test", "event": "started", "name": "tests::conformance::cmd::transaction::c019_MT_TRANSACTION_node_should_broadcast_transaction_to_all_peers" }
-{ "type": "test", "name": "tests::conformance::cmd::transaction::c019_MT_TRANSACTION_node_should_broadcast_transaction_to_all_peers", "event": "ok", "exec_time": 43.144170873 }
+{ "type": "test", "name": "tests::conformance::cmd::transaction::c019_MT_TRANSACTION_node_should_broadcast_transaction_to_all_peers", "event": "ok", "exec_time": 39.629078228 }
 { "type": "test", "event": "started", "name": "tests::conformance::handshake::c001_handshake_when_node_receives_connection" }
-{ "type": "test", "name": "tests::conformance::handshake::c001_handshake_when_node_receives_connection", "event": "ok", "exec_time": 0.608011762 }
+{ "type": "test", "name": "tests::conformance::handshake::c001_handshake_when_node_receives_connection", "event": "ok", "exec_time": 0.985513032 }
 { "type": "test", "event": "started", "name": "tests::conformance::handshake::c002_handshake_when_node_initiates_connection" }
-{ "type": "test", "name": "tests::conformance::handshake::c002_handshake_when_node_initiates_connection", "event": "ok", "exec_time": 2.069489018 }
+{ "type": "test", "name": "tests::conformance::handshake::c002_handshake_when_node_initiates_connection", "event": "ok", "exec_time": 2.222392565 }
 { "type": "test", "event": "started", "name": "tests::conformance::handshake::c006_node_should_not_send_any_messages_if_no_handshake" }
-{ "type": "test", "name": "tests::conformance::handshake::c006_node_should_not_send_any_messages_if_no_handshake", "event": "ok", "exec_time": 21.09778384 }
+{ "type": "test", "name": "tests::conformance::handshake::c006_node_should_not_send_any_messages_if_no_handshake", "event": "ok", "exec_time": 20.697547984 }
 { "type": "test", "event": "started", "name": "tests::conformance::post_handshake::endpoints::c018_TM_ENDPOINTS_node_should_send_endpoints_after_handshake" }
-{ "type": "test", "name": "tests::conformance::post_handshake::endpoints::c018_TM_ENDPOINTS_node_should_send_endpoints_after_handshake", "event": "ok", "exec_time": 1.22240582 }
+{ "type": "test", "name": "tests::conformance::post_handshake::endpoints::c018_TM_ENDPOINTS_node_should_send_endpoints_after_handshake", "event": "ok", "exec_time": 1.120436003 }
 { "type": "test", "event": "started", "name": "tests::conformance::post_handshake::manifest::c017_TM_MANIFEST_node_should_send_manifest_after_handshake" }
-{ "type": "test", "name": "tests::conformance::post_handshake::manifest::c017_TM_MANIFEST_node_should_send_manifest_after_handshake", "event": "ok", "exec_time": 0.742685799 }
+{ "type": "test", "name": "tests::conformance::post_handshake::manifest::c017_TM_MANIFEST_node_should_send_manifest_after_handshake", "event": "ok", "exec_time": 0.786818869 }
 { "type": "test", "event": "started", "name": "tests::conformance::post_handshake::peer_shard_info::c005_TM_GET_PEER_SHARD_INFO_V2_node_should_query_for_shard_info_after_handshake" }
-{ "type": "test", "name": "tests::conformance::post_handshake::peer_shard_info::c005_TM_GET_PEER_SHARD_INFO_V2_node_should_query_for_shard_info_after_handshake", "event": "ok", "exec_time": 0.621428741 }
+{ "type": "test", "name": "tests::conformance::post_handshake::peer_shard_info::c005_TM_GET_PEER_SHARD_INFO_V2_node_should_query_for_shard_info_after_handshake", "event": "ok", "exec_time": 0.976841677 }
 { "type": "test", "event": "started", "name": "tests::conformance::post_handshake::validation::c021_TM_VALIDATION_node_should_send_validation_after_handshake" }
-{ "type": "test", "name": "tests::conformance::post_handshake::validation::c021_TM_VALIDATION_node_should_send_validation_after_handshake", "event": "ok", "exec_time": 1.68519239 }
+{ "type": "test", "name": "tests::conformance::post_handshake::validation::c021_TM_VALIDATION_node_should_send_validation_after_handshake", "event": "ok", "exec_time": 1.317880527 }
 { "type": "test", "event": "started", "name": "tests::conformance::post_handshake::validators::c015_TM_VALIDATOR_LIST_COLLECTION_node_should_send_validator_list" }
-{ "type": "test", "name": "tests::conformance::post_handshake::validators::c015_TM_VALIDATOR_LIST_COLLECTION_node_should_send_validator_list", "event": "ok", "exec_time": 0.61782093 }
+{ "type": "test", "name": "tests::conformance::post_handshake::validators::c015_TM_VALIDATOR_LIST_COLLECTION_node_should_send_validator_list", "event": "ok", "exec_time": 0.705562802 }
 { "type": "test", "event": "started", "name": "tests::conformance::post_handshake::validators::c026_TM_VALIDATOR_LIST_send_validator_list" }
-{ "type": "test", "name": "tests::conformance::post_handshake::validators::c026_TM_VALIDATOR_LIST_send_validator_list", "event": "ok", "exec_time": 1.26299654 }
+{ "type": "test", "name": "tests::conformance::post_handshake::validators::c026_TM_VALIDATOR_LIST_send_validator_list", "event": "ok", "exec_time": 1.5107770569999999 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::get_by_hash::c007_TM_GET_OBJECT_BY_HASH_get_transaction_by_hash" }
-{ "type": "test", "name": "tests::conformance::query::get_by_hash::c007_TM_GET_OBJECT_BY_HASH_get_transaction_by_hash", "event": "ok", "exec_time": 4.260823976 }
+{ "type": "test", "name": "tests::conformance::query::get_by_hash::c007_TM_GET_OBJECT_BY_HASH_get_transaction_by_hash", "event": "ok", "exec_time": 3.857912321 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::get_by_hash::c008_TM_HAVE_TRANSACTIONS_query_for_transactions_after_have_transactions" }
-{ "type": "test", "name": "tests::conformance::query::get_by_hash::c008_TM_HAVE_TRANSACTIONS_query_for_transactions_after_have_transactions", "event": "ok", "exec_time": 3.462666434 }
+{ "type": "test", "name": "tests::conformance::query::get_by_hash::c008_TM_HAVE_TRANSACTIONS_query_for_transactions_after_have_transactions", "event": "ok", "exec_time": 3.815120917 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::ledger::c004_t1_TM_GET_LEDGER_LiBase_get_basic_info" }
-{ "type": "test", "name": "tests::conformance::query::ledger::c004_t1_TM_GET_LEDGER_LiBase_get_basic_info", "event": "ok", "exec_time": 0.951923312 }
+{ "type": "test", "name": "tests::conformance::query::ledger::c004_t1_TM_GET_LEDGER_LiBase_get_basic_info", "event": "ok", "exec_time": 1.017815931 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::ledger::c004_t2_TM_GET_LEDGER_LiAsNode_get_account_state_info" }
-{ "type": "test", "name": "tests::conformance::query::ledger::c004_t2_TM_GET_LEDGER_LiAsNode_get_account_state_info", "event": "ok", "exec_time": 0.599890892 }
+{ "type": "test", "name": "tests::conformance::query::ledger::c004_t2_TM_GET_LEDGER_LiAsNode_get_account_state_info", "event": "ok", "exec_time": 0.888962809 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::peer_shard_info::c011_TM_GET_PEER_SHARD_INFO_V2_node_should_relay_shard_info" }
-{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c011_TM_GET_PEER_SHARD_INFO_V2_node_should_relay_shard_info", "event": "ok", "exec_time": 4.272378423 }
+{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c011_TM_GET_PEER_SHARD_INFO_V2_node_should_relay_shard_info", "event": "ok", "exec_time": 4.097794856 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::peer_shard_info::c012_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_with_invalid_key_type" }
-{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c012_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_with_invalid_key_type", "event": "ok", "exec_time": 20.944944331 }
+{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c012_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_with_invalid_key_type", "event": "ok", "exec_time": 21.560009311 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::peer_shard_info::c013_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_when_relays_equals_zero" }
-{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c013_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_when_relays_equals_zero", "event": "ok", "exec_time": 21.695515658 }
+{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c013_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_when_relays_equals_zero", "event": "ok", "exec_time": 22.182652218 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::peer_shard_info::c014_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_when_relays_above_limit" }
-{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c014_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_when_relays_above_limit", "event": "ok", "exec_time": 21.414306053 }
+{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c014_TM_GET_PEER_SHARD_INFO_V2_node_should_not_relay_shard_info_when_relays_above_limit", "event": "ok", "exec_time": 22.711256409 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::peer_shard_info::c023_TM_PEER_SHARD_INFO_V2_node_should_respond_with_shard_info_if_sharding_enabled" }
-{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c023_TM_PEER_SHARD_INFO_V2_node_should_respond_with_shard_info_if_sharding_enabled", "event": "ok", "exec_time": 0.965978568 }
+{ "type": "test", "name": "tests::conformance::query::peer_shard_info::c023_TM_PEER_SHARD_INFO_V2_node_should_respond_with_shard_info_if_sharding_enabled", "event": "ok", "exec_time": 1.490239176 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::ping_pong::c003_t1_TM_PING_expect_pong" }
-{ "type": "test", "name": "tests::conformance::query::ping_pong::c003_t1_TM_PING_expect_pong", "event": "ok", "exec_time": 1.255580388 }
+{ "type": "test", "name": "tests::conformance::query::ping_pong::c003_t1_TM_PING_expect_pong", "event": "ok", "exec_time": 0.767199104 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::ping_pong::c003_t2_TM_PING_expect_ping" }
-{ "type": "test", "name": "tests::conformance::query::ping_pong::c003_t2_TM_PING_expect_ping", "event": "ok", "exec_time": 123.004312871 }
+{ "type": "test", "name": "tests::conformance::query::ping_pong::c003_t2_TM_PING_expect_ping", "event": "ok", "exec_time": 122.77113943 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::ping_pong::c003_t3_TM_PING_send_pong" }
-{ "type": "test", "name": "tests::conformance::query::ping_pong::c003_t3_TM_PING_send_pong", "event": "ok", "exec_time": 124.833948221 }
+{ "type": "test", "name": "tests::conformance::query::ping_pong::c003_t3_TM_PING_send_pong", "event": "ok", "exec_time": 125.024886369 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::proof_path::c025_TM_PROOF_PATH_REQUEST_TM_PROOF_PATH_RESPONSE_send_req_expect_rsp" }
-{ "type": "test", "name": "tests::conformance::query::proof_path::c025_TM_PROOF_PATH_REQUEST_TM_PROOF_PATH_RESPONSE_send_req_expect_rsp", "event": "ok", "exec_time": 7.170105042 }
+{ "type": "test", "name": "tests::conformance::query::proof_path::c025_TM_PROOF_PATH_REQUEST_TM_PROOF_PATH_RESPONSE_send_req_expect_rsp", "event": "ok", "exec_time": 6.927647295 }
 { "type": "test", "event": "started", "name": "tests::conformance::query::replay_delta::c022_TM_REPLAY_DELTA_REQUEST_TM_REPLAY_DELTA_RESPONSE_node_should_respond_for_replay_delta_request" }
-{ "type": "test", "name": "tests::conformance::query::replay_delta::c022_TM_REPLAY_DELTA_REQUEST_TM_REPLAY_DELTA_RESPONSE_node_should_respond_for_replay_delta_request", "event": "ok", "exec_time": 6.145336525 }
+{ "type": "test", "name": "tests::conformance::query::replay_delta::c022_TM_REPLAY_DELTA_REQUEST_TM_REPLAY_DELTA_RESPONSE_node_should_respond_for_replay_delta_request", "event": "ok", "exec_time": 6.292054267 }
 { "type": "test", "event": "started", "name": "tests::conformance::stateful::should_start_stop_stateful_node" }
 { "type": "test", "name": "tests::conformance::stateful::should_start_stop_stateful_node", "event": "ignored", "message": "convenience test to tinker with a running node for dev purposes" }
 { "type": "test", "event": "started", "name": "tests::conformance::status::c010_TM_STATUS_CHANGE_node_should_send_ledger_information_using_status_change" }
-{ "type": "test", "name": "tests::conformance::status::c010_TM_STATUS_CHANGE_node_should_send_ledger_information_using_status_change", "event": "ok", "exec_time": 6.267112965 }
+{ "type": "test", "name": "tests::conformance::status::c010_TM_STATUS_CHANGE_node_should_send_ledger_information_using_status_change", "event": "ok", "exec_time": 6.445691603 }
 { "type": "test", "event": "started", "name": "tests::idle_node_in_the_background::dev001_t1_RUN_NODE_FOREVER_with_logs" }
 { "type": "test", "name": "tests::idle_node_in_the_background::dev001_t1_RUN_NODE_FOREVER_with_logs", "event": "ignored", "message": "convenience test to tinker with a running node for dev purposes" }
 { "type": "test", "event": "started", "name": "tests::idle_node_in_the_background::dev001_t2_RUN_NODE_FOREVER_no_logs" }
@@ -90,43 +90,43 @@
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::normal_handshake" }
 { "type": "test", "name": "tests::resistance::handshake::normal_handshake", "event": "ignored", "message": "internal test" }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t10_HANDSHAKE_closed_ledger_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t10_HANDSHAKE_closed_ledger_field", "event": "ok", "exec_time": 3.675487308 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t10_HANDSHAKE_closed_ledger_field", "event": "ok", "exec_time": 4.182661655 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t11_HANDSHAKE_previous_ledger_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t11_HANDSHAKE_previous_ledger_field", "event": "ok", "exec_time": 1.375503855 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t11_HANDSHAKE_previous_ledger_field", "event": "ok", "exec_time": 1.428596014 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t12_HANDSHAKE_extra_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t12_HANDSHAKE_extra_field", "event": "ok", "exec_time": 1.2906822390000001 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t12_HANDSHAKE_extra_field", "event": "ok", "exec_time": 1.726349895 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t1_HANDSHAKE_reject_if_user_agent_too_long" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t1_HANDSHAKE_reject_if_user_agent_too_long", "event": "ok", "exec_time": 2.405807707 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t1_HANDSHAKE_reject_if_user_agent_too_long", "event": "ok", "exec_time": 1.849059558 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t2_HANDSHAKE_reject_if_server_too_long" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t2_HANDSHAKE_reject_if_server_too_long", "event": "ok", "exec_time": 2.623245043 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t2_HANDSHAKE_reject_if_server_too_long", "event": "ok", "exec_time": 2.787688419 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t3_HANDSHAKE_connection_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t3_HANDSHAKE_connection_field", "event": "ok", "exec_time": 6.267444991 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t3_HANDSHAKE_connection_field", "event": "ok", "exec_time": 9.031432499 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t4_HANDSHAKE_connect_as_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t4_HANDSHAKE_connect_as_field", "event": "ok", "exec_time": 106.388107319 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t4_HANDSHAKE_connect_as_field", "event": "ok", "exec_time": 106.626608449 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t5_HANDSHAKE_crawl_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t5_HANDSHAKE_crawl_field", "event": "ok", "exec_time": 3.355952376 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t5_HANDSHAKE_crawl_field", "event": "ok", "exec_time": 3.673093152 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t6_HANDSHAKE_x_protocol_ctl_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t6_HANDSHAKE_x_protocol_ctl_field", "event": "ok", "exec_time": 4.135056326 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t6_HANDSHAKE_x_protocol_ctl_field", "event": "ok", "exec_time": 4.358600811 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t7_HANDSHAKE_network_time_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t7_HANDSHAKE_network_time_field", "event": "ok", "exec_time": 85.968130931 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t7_HANDSHAKE_network_time_field", "event": "ok", "exec_time": 86.938324445 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t8_HANDSHAKE_upgrade_req_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t8_HANDSHAKE_upgrade_req_field", "event": "ok", "exec_time": 26.783436047 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t8_HANDSHAKE_upgrade_req_field", "event": "ok", "exec_time": 26.299889185 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r001_t9_HANDSHAKE_user_agent_field" }
-{ "type": "test", "name": "tests::resistance::handshake::r001_t9_HANDSHAKE_user_agent_field", "event": "ok", "exec_time": 3.616215747 }
+{ "type": "test", "name": "tests::resistance::handshake::r001_t9_HANDSHAKE_user_agent_field", "event": "ok", "exec_time": 4.96058868 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r003_t1_HANDSHAKE_reject_if_public_key_has_bit_flipped" }
-{ "type": "test", "name": "tests::resistance::handshake::r003_t1_HANDSHAKE_reject_if_public_key_has_bit_flipped", "event": "ok", "exec_time": 2.09592746 }
+{ "type": "test", "name": "tests::resistance::handshake::r003_t1_HANDSHAKE_reject_if_public_key_has_bit_flipped", "event": "ok", "exec_time": 1.649495414 }
 { "type": "test", "event": "started", "name": "tests::resistance::handshake::r003_t2_HANDSHAKE_reject_if_shared_value_has_bit_flipped" }
-{ "type": "test", "name": "tests::resistance::handshake::r003_t2_HANDSHAKE_reject_if_shared_value_has_bit_flipped", "event": "ok", "exec_time": 1.736353963 }
+{ "type": "test", "name": "tests::resistance::handshake::r003_t2_HANDSHAKE_reject_if_shared_value_has_bit_flipped", "event": "ok", "exec_time": 1.740846948 }
 { "type": "test", "event": "started", "name": "tests::resistance::random_bytes::r002_node_must_disconnect_when_receiving_random_bytes" }
-Seed for RNG: [221, 8, 175, 232, 177, 212, 80, 10, 9, 94, 205, 55, 176, 19, 202, 161, 168, 33, 204, 14, 110, 60, 54, 52, 52, 216, 59, 239, 133, 182, 60, 227]
-{ "type": "test", "name": "tests::resistance::random_bytes::r002_node_must_disconnect_when_receiving_random_bytes", "event": "ok", "exec_time": 12.030906244 }
+Seed for RNG: [172, 54, 225, 173, 76, 52, 25, 42, 235, 93, 205, 13, 152, 14, 87, 29, 79, 146, 5, 61, 225, 159, 17, 242, 223, 190, 202, 197, 50, 132, 7, 185]
+{ "type": "test", "name": "tests::resistance::random_bytes::r002_node_must_disconnect_when_receiving_random_bytes", "event": "failed", "exec_time": 11.54322428 }
 { "type": "test", "event": "started", "name": "tests::resistance::random_bytes::r004_node_must_disconnect_when_receiving_random_bytes_pre_handshake" }
-Seed for RNG: [253, 16, 43, 168, 121, 254, 118, 87, 41, 44, 184, 54, 67, 180, 175, 2, 118, 110, 81, 73, 25, 1, 1, 244, 63, 63, 134, 80, 229, 168, 102, 164]
-{ "type": "test", "name": "tests::resistance::random_bytes::r004_node_must_disconnect_when_receiving_random_bytes_pre_handshake", "event": "ok", "exec_time": 11.390206847 }
+Seed for RNG: [140, 41, 170, 254, 225, 129, 21, 88, 127, 251, 211, 185, 190, 102, 106, 135, 104, 170, 13, 66, 175, 128, 36, 190, 72, 157, 16, 17, 228, 157, 39, 18]
+{ "type": "test", "name": "tests::resistance::random_bytes::r004_node_must_disconnect_when_receiving_random_bytes_pre_handshake", "event": "ok", "exec_time": 14.853595227 }
 { "type": "test", "event": "started", "name": "tools::crawl::test::should_return_empty_for_invalid_port" }
-{ "type": "test", "name": "tools::crawl::test::should_return_empty_for_invalid_port", "event": "ok", "exec_time": 0.000014601 }
+{ "type": "test", "name": "tools::crawl::test::should_return_empty_for_invalid_port", "event": "ok", "exec_time": 0.000008701 }
 { "type": "test", "event": "started", "name": "tools::crawl::test::should_return_some_for_number_port" }
-{ "type": "test", "name": "tools::crawl::test::should_return_some_for_number_port", "event": "ok", "exec_time": 0.0000016 }
+{ "type": "test", "name": "tools::crawl::test::should_return_some_for_number_port", "event": "ok", "exec_time": 0.000002 }
 { "type": "test", "event": "started", "name": "tools::crawl::test::should_return_some_for_string_port" }
-{ "type": "test", "name": "tools::crawl::test::should_return_some_for_string_port", "event": "ok", "exec_time": 0.0000026 }
-{ "type": "suite", "event": "ok", "passed": 49, "failed": 0, "ignored": 15, "measured": 0, "filtered_out": 0, "exec_time": 765.535209581 }
+{ "type": "test", "name": "tools::crawl::test::should_return_some_for_string_port", "event": "ok", "exec_time": 0.0000031 }
+{ "type": "suite", "event": "failed", "passed": 48, "failed": 1, "ignored": 15, "measured": 0, "filtered_out": 0, "exec_time": 778.534588196 }
