@@ -15,7 +15,7 @@ use serde::Deserialize;
 const IPS_LIST_PATH: &str = "./tools/ips_list.json";
 
 #[derive(Default, Clone, Deserialize, Debug)]
-pub struct IpsList {
+struct IpsList {
     pub nodes: Vec<String>,
 }
 
