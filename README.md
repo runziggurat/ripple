@@ -65,7 +65,7 @@ Create a package of IP addresses which are required for performance tests.
 You must first fetch the `ips.py` script from the ziggurat-core repository.  Run this:
 
 ```bash
-./tools/core_scripts.sh
+wget -O tools/ips.py https://raw.githubusercontent.com/runziggurat/ziggurat-core/main/ziggurat-core-scripts/ips.py
 ```
 
 _NOTE: To run the `ips.py` script below, the user must be in the sudoers file in order to use this script.
