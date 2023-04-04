@@ -26,7 +26,7 @@ use crate::{
     setup::node::{Node, NodeType},
     tools::{
         constants::{EXPECTED_RESULT_TIMEOUT, TEST_ACCOUNT},
-        ips::IPS,
+        ips::ips,
         rpc::{get_transaction_info, wait_for_account_data, wait_for_state},
         synth_node::SyntheticNode,
     },
@@ -99,14 +99,14 @@ async fn p003_t1_GET_TRANSACTION_latency() {
         let node_addr = node.addr();
 
         let mut synth_sockets = Vec::with_capacity(synth_count);
-        let mut ips = IPS.to_vec();
+        let mut ips = ips();
 
         for _ in 0..synth_count {
             // If there is address for our thread in the pool we can use it.
             // Otherwise we'll not set bound_addr and use local IP addr (127.0.0.1).
-            let ip = ips.pop().unwrap_or("127.0.0.1");
+            let ip = ips.pop().unwrap_or("127.0.0.1".to_string());
 
-            let ip = SocketAddr::new(IpAddr::V4(Ipv4Addr::from_str(ip).unwrap()), 0);
+            let ip = SocketAddr::new(IpAddr::V4(Ipv4Addr::from_str(&ip).unwrap()), 0);
             let socket = TcpSocket::new_v4().unwrap();
 
             // Make sure we can reuse the address and port
