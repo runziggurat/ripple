@@ -194,7 +194,7 @@ pub async fn get_crawl_response(
 /// That means that IPv6 address is wrapped in []
 fn format_ip_for_url(addr: SocketAddr) -> String {
     if let IpAddr::V6(ip) = addr.ip() {
-        format!("[{}]", ip)
+        format!("[{ip}]")
     } else {
         addr.ip().to_string()
     }

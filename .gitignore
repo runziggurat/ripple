@@ -1,3 +1,5 @@
 /target
 /Cargo.lock
 /tools/__pycache__
+/tools/ips_list.json
+/tools/ips.py
