@@ -24,13 +24,16 @@ struct IpsList {
 /// array.
 fn load_ips_nodes(filepath: &str) -> Vec<String> {
     let result = fs::read_to_string(filepath);
-    if result.is_err() {
-        println!("no file {filepath}");
-        return Vec::<String>::new();
+    match result {
+        Ok(jstring) => {
+            let ips_list: IpsList = serde_json::from_str(&jstring).unwrap();
+            return ips_list.nodes;
+        }
+        Err(error) => {
+            println!("Problem reading file: {:?}", error);
+            return Vec::<String>::new();
+        }
     }
-    let jstring = result.unwrap();
-    let ips_list: IpsList = serde_json::from_str(&jstring).unwrap();
-    ips_list.nodes
 }
 
 pub fn ips() -> Vec<String> {
