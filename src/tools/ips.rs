@@ -27,7 +27,7 @@ fn load_ips_nodes(filepath: &str) -> Vec<String> {
     match result {
         Ok(jstring) => {
             let ips_list: IpsList = serde_json::from_str(&jstring).unwrap();
-            return ips_list.nodes;
+            ips_list.nodes
         }
         Err(_) => {
             panic!("Problem reading file: {filepath}.  Confirm that you have run the ips.py script, as described in the readme.");
