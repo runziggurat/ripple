@@ -141,7 +141,6 @@ async fn p002_connections_load() {
         let node_addr = node.addr();
 
         let mut synth_sockets = Vec::with_capacity(synth_count);
-        // let mut ips = IPS.to_vec();
         let mut ips = ips();
 
         for _ in 0..synth_count {
