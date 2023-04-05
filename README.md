@@ -76,13 +76,13 @@ From the root repository directory, depending on your OS, run one of the followi
 #### Preconditions under Linux
 Generate dummy devices with addresses:
 ```bash
-python3 ./tools/ips.py --subnet 1.1.1.0/24 --file src/tools/ips.rs --dev_prefix test_zeth
+python3 ./tools/ips.py --subnet 1.1.1.0/24 --file tools/ips_list.json --dev_prefix test_zeth
 ```
 
 #### Preconditions under MacOS
 Add the whole subnet to the loopback device - can also be used on Linux (device name - Linux: `lo`, MacOS: `lo0`):
 ```bash
-python3 ./tools/ips.py --subnet 1.1.0.0/24 --file src/tools/ips.rs --dev lo0
+python3 ./tools/ips.py --subnet 1.1.0.0/24 --file tools/ips_list.json --dev lo0
 ```
 
 Read ./tools/ips.py for more details.
