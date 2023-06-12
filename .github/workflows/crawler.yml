@@ -28,7 +28,7 @@ jobs:
           sed -i 's#^/var/log/rippled/debug.log#/home/runner/work/rippled/rippled/debug.log#' ~/.config/ripple/rippled.cfg
       - uses: actions/download-artifact@v3
         with:
-          name: rippled-executable
+          name: node-executable
           path: ./rippled
       - name: Begin crawling
         run: |
